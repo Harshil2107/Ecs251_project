@@ -42,6 +42,26 @@ and resource utilization [11]. In our research, we have come up with a “dynami
 pool” with varying number of threads such that we can optimize minimum response time for
  maximum resource utilization. 
 
+ Start Rough note for Q2 ....................Current heuristics that are used to
+  determine the number of threads are flawed[4]. There has been some researches 
+  on a dynamic model for thread size. In the beginning, they just had the watermark 
+  model(adjusts the number of threads according to the current number of incoming 
+  requests)[20] .While the watermark model solves the problem of “efficient usage of
+   resources”, it doesn’t efficiently obtain the required number of threads in 
+   advance[19]. There are some prediction based models, but In the prediction based
+    models, only factor such as the request rate or number of worker threads is 
+    considered in the management. [19,20,11] One research that has proposed dynamic
+     thread pool(prediction based) model, themselves point out that the model lacks 
+     testing for a longer period of time and on general server environment which provides
+      various services simultaneously[4].Trendy exponential moving average model 
+      proposed in one study doesn’t have the desired accuracy in its predictions[11]. 
+
+ All these researches into dynamic sizes of pool, but none look at the memory usage/CPU
+  overheads and whether that are significantly lower than static pool to signify the 
+  performance cost, whatever they may be. 
+ We have to look at this , so that this informs the people making decision to choose 
+ dynamic thread pools moving forward. ………………………End Rough note for Q2
+
 example citation \cite{hu2024fine}.
 
 \bibliographystyle{acl_natbib}
