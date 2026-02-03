@@ -28,34 +28,34 @@
 \section{Introduction \& Motivation}
 The advancements in multicore architecture and multiprocessor computers are increasing
  and ongoing \cite{adam2022co}. To keep up with this trend, we need techniques like 
- multithreading  to maximize the performance of  ever-advancing cpu’s (ni manula). 
+ multithreading  to maximize the performance of  ever-advancing cpu’s \cite{ni}. 
  Multithreading is of vital importance for this because it can harness the power of multiprocessor 
  computer, improve system reliability by preventing one operation from negatively 
  affecting another in a program(user interface event affecting time-critical operation),
   and maximize cpu use (in programs that read/write from a file, perform I/O, or poll 
- the user interface)[13]
+ the user interface) \cite{ni}.
 
 While a very efficient tool for harnessing the power of multiprocessor computer, 
 multithreading does come with some challenges. The top most important challenge in 
-multithreading is the management of thread pools\cite{lee2011novel}, namely the size of the thread 
+multithreading is the management of thread pools \cite{lee2011novel}, namely the size of the thread 
 pool. The number of threads in a thread pool determine  the changes in response times 
-and resource utilization [11]. In our research, we have come up with a “dynamic thread 
+and resource utilization \cite{lee2011novel}. In our research, we have come up with a “dynamic thread 
 pool” with varying number of threads such that we can optimize minimum response time for
  maximum resource utilization. 
 
  Start Rough note for Q2 ....................Current heuristics that are used to
-  determine the number of threads are flawed[4]. There has been some researches 
+  determine the number of threads are flawed \cite{ling2000analysis}. There has been some researches 
   on a dynamic model for thread size. In the beginning, they just had the watermark 
   model(adjusts the number of threads according to the current number of incoming 
-  requests)[20] .While the watermark model solves the problem of “efficient usage of
+  requests) \cite{kim2007prediction} .While the watermark model solves the problem of “efficient usage of
    resources”, it doesn’t efficiently obtain the required number of threads in 
-   advance[19]. There are some prediction based models, but In the prediction based
+   advance \cite{kang2008prediction}. There are some prediction based models, but In the prediction based
     models, only factor such as the request rate or number of worker threads is 
-    considered in the management. [19,20,11] One research that has proposed dynamic
+    considered in the management. \cite{lee2011novel} One research that has proposed dynamic
      thread pool(prediction based) model, themselves point out that the model lacks 
      testing for a longer period of time and on general server environment which provides
-      various services simultaneously[4].Trendy exponential moving average model 
-      proposed in one study doesn’t have the desired accuracy in its predictions[11]. 
+      various services simultaneously \cite{ling2000analysis}.Trendy exponential moving average model 
+      proposed in one study doesn’t have the desired accuracy in its predictions \cite{lee2011novel}. 
 
  All these researches into dynamic sizes of pool, but none look at the memory usage/CPU
   overheads and whether that are significantly lower than static pool to signify the 
