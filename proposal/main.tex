@@ -37,7 +37,7 @@ In our research, we aim to collect empirical data that informs decisions on thre
 In doing so, we also aim to propose a “dynamic thread pool” with varying number of threads such that we can optimize minimum response time for maximum resource utilization.
 We will evaluate evaluate the performance trade-offs between static and dynamic thread pools under varying workloads and system configurations and answer the question: At what point does the overhead of dynamic thread creation outweigh its memory savings compared to static thread pools?
 
-\section{Background \& Related Work}
+\section{Background \& Related Work} \label{sec:background}
 
 Current heuristics that are used to determine the number of threads are flawed \cite{ling2000analysis}.
 In our preliminary research, we find that there have been few researches on dynamic model for thread size. 
@@ -60,46 +60,98 @@ We need to make sure that both implementations are the same in terms of how they
 As shown by Desrochers \cite{desrochers2014fast_lock_free_queue}, that the throughput gap between a lock-free queue and lock\_based queues can range from 14x to 200x depending on the platform.
 We need to make sure that both implementations use the same data structures such as queues, locks, etc and the same algorithms to manage to schedule the tasks and threads.
 
-\section{Evaluation}
+\section{Proposed Solution}
 
-Our first step is to implement two thread-pool methods: a static and a dynamic thread pool with C++. To compare them fairly, we will benchmark under three representative workload patterns, each defined by a task arrival process that reflects common real-world traffic conditions:
+We address the shortcomings mentioned in \ref{sec:background} by implementing minimal static and dynamic thread pool architectures in C++ that differ only in their thread lifecycle management policies, while sharing the same task scheduling and execution logic.
+The static thread pool will pre-create a fixed number of threads at initialization, which will remain active throughout the lifetime of the pool.
+The dynamic thread pool will start with zero threads and will create new threads on-demand when tasks arrive.
+Idle threads will be terminated after a configurable timeout period to free up resources.
+Importantly, both implementations will use the same task queue, task scheduling algorithm (e.g., FIFO), and other shared components to ensure a fair comparison.
+This approach will allow us to isolate architectural differences from quality unlike comparing off the shelf implementations like Intel TBB or Boost, which may have optimizations that effect performance independently of thread pool policy.
+
+\subsection{Evaluation}
+
+To evaluate our proposed thread pool implementations, we will benchmark them under three traffic patterns, each defined by a task arrival process that reflects different traffic scenarios:
 \begin{itemize}
-  \item Steady load: a constant arrival rate of 1,000 tasks/second for the full duration of the run.
-  \item Flash crowd: a burst of 5,000 tasks/second followed by a 10-second idle period, repeated in cycles.
-  \item Daily ramp: alternating phases on 100 tasks/second and 2,000 tasks/second in repeated cycles.
+  \item Steady load: a constant arrival rate of X tasks/second for the full duration of the run.
+  \item Burst Load: a burst of X tasks/second followed by a Y-second idle period, repeated in cycles.
+  \item Ramping Load: alternating phases on X tasks/second and Y tasks/second in repeated cycles.
 \end{itemize}
-Across these workloads, we will evaluate two resource dimensions that influence the trade-off between static and dynamic thread pools: latency (time cost) and memory (space cost). To isolate how task characteristics interact with thread-pool policy, we will apply two controlled micro-benchmarks:
+We will also vary the number rate of incoming tasks to simulate different levels of system load.
+To isolate how task characteristics interact with thread-pool policy, we will apply two controlled micro-benchmarks:
 \begin{itemize}
     \item Memory-based tasks: $N\times N$ matrix multiplications, where $N$ is tunable to scale memory pressure.
     \item Latency-based tasks: a synthetic task that blocks for a configurable sleep duration $T$ to emulate downstream I/O or service latency.
 \end{itemize}
-We evaluate four task categories for both benchmarks. For each benchmark, we run (1) Light, (2) Medium, and (3) Heavy tasks by increasing the corresponding tuning parameter values (T for latency-based tasks and N for memory-based tasks). Specifically, each request for the latency-based tasks performs a blocking sleep with $T \in \{100\, \mu s, 1\,ms, 10\,ms\}$, to represent the Light, Medium, and Heavy service time. For memory-based tasks, we use $N\times N$ matrix multiplication with $N \in \{128, 256, 512\}$ to represent Light, Medium, and Heavy working-set sizes, respectively. Finally, we include (4) a Mixed workload for each constraint to capture heterogeneity: 60\% Light / 30\% Medium / 10\% Heavy, where each request samples its T or N from the setting according to this distribution. 
-\\
-\\
-For each benchmark run, we will record four metrics to evaluate the time and memory costs accordingly (Table 1).
+
+For each task type, we evaluate four benchmark intensities: Light, Medium, Heavy, and Mixed.
+For latency-based tasks, each request performs a blocking sleep with $T \in \{100\, \mu s, 1\,ms, 10\,ms\}$ to represent Light, Medium, and Heavy service times, respectively.
+For memory-based tasks, we use $N\times N$ matrix multiplication with $N \in \{128, 256, 512\}$ to represent Light, Medium, and Heavy working-set sizes, respectively.
+The Mixed workload captures heterogeneity by combining light, medium, and heavy tasks in varied proportions (e.g., 50\% light, 30\% medium, 20\% heavy).
+
+We will evaluate the following experiment matrix (Table 1):
 
 \begingroup
-\setlength{\tabcolsep}{10pt} % Default value: 6pt
-\renewcommand{\arraystretch}{1.5} % Default value: 1
-\begin{table}
+\setlength{\tabcolsep}{8pt}
+\renewcommand{\arraystretch}{1.5}
+\begin{table}[h]
 \centering
 \small
-\begin{tabular}{l|p{0.5\linewidth}}
+\begin{tabular}{l|l}
 \hline
-\textbf{Metric} & \textbf{Definition} \\
+\textbf{Dimension} & \textbf{Values} \\
 \hline
-Throughput & Tasks completed per second \\
-Latency (p50, p95, p99) & Time from task submission to completion \\
-PSS Memory & Proportional Set Size (attributable RAM used by the process) \\
-Thread Count & Active threads over time \\
+Traffic Patterns & Steady load, Burst Load, Ramping Load \\
+Task Types & Memory-based, Latency-based \\
+Task Intensities & Light, Medium, Heavy, Mixed \\
+Pool Types & Static, Dynamic \\
+Core Counts & 4 cores, 16 cores \\
 \hline
 \end{tabular}
-\caption{Metrics collected in each benchmark run.}
-\label{tab:metrics}
+\caption{Experiment configuration matrix.}
+\label{tab:config}
 \end{table}
 \endgroup
 
-We will run 12 experiment configurations in total: three workload patterns $\times$ 2 pool types (static and dynamic) $\times$ 2 core counts (4 cores and 16 cores). We will fix the CPU resources available to the benchmark by restricting it to exactly 4 or 16 cores using Linux CPU affinity (e.g., tasket). For each configuration, we run the benchmark for 120 seconds and repeat the process three times; we then aggregate the metrics across the three trials and report the mean and variance.
+For each task arrival pattern, we will measure throughput (tasks completed per second), latency (p50, p95, p99 time from task submission to completion), PSS Memory (Proportional Set Size attributable RAM used by the process), and thread count (active threads over time). We will fix the CPU resources available to the benchmark by restricting it to exactly 4 or 16 cores using Linux CPU affinity (e.g., tasket). For each configuration, we run the benchmark for 120 seconds and repeat the process three times.
+we will then aggregate the metrics across the three trials and report the mean and variance.
+
+\section {Expected Results}
+
+For out project, we expect to see that the dynamic thread pool with outperform the static thread pool in scenarios with variable workloads, such as bursty or ramping traffic patterns.
+This is because the dynamic pool can adapt to changing demand by creating or terminating threads as needed, leading to better resource utilization.
+In contrast, the static thread pool might perform well under steady load conditions where the fixed number of threads can handle the incoming tasks without significant queuing delays.
+We also expect the dynamic thread pool to incur some overhead due to thread creation and destruction, which may lead to higher latency in scenarios with frequent load changes.
+However, we expect that this overhead will be offset by the improved responsiveness and reduced queuing delays in high load and variable traffic scenarios.
+In terms of memory usage, we expect the dynamic thread pools to use less overall memory when compared to the static thread pools during low load periods, as idle threads in the dynamic thread pool can be terminated to free up resources.
+
+
+\section{Timeline}
+
+We have broken down our timeline into weeks with six weeks to finish and present the project (Table 2).
+
+\begingroup
+\setlength{\tabcolsep}{8pt}
+\renewcommand{\arraystretch}{1.5}
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{l|p{0.65\linewidth}}
+\hline
+\textbf{Week} & \textbf{Tasks} \\
+\hline
+Week 1 (2026-2-3) & Research dynamic and static thread pools, experiment with code to understand implementation\\
+Week 2 (2026-2-8) & Start implementing the thread pools, traffic generation scripts and evaluation scripts, continue research as needed \\
+Week 3 (2026-2-15) & Continue working on code, verify progress aligns with plan, fix bugs\\
+Week 4 (2026-2-22) & Complete implementation and start evaluation \\
+Week 5 (2026-3-1) & Complete results, write research paper, create presentation slides and practice \\
+Week 6 (2026-3-8) & Finalize results, paper, and slides. Submit project and present \\
+\hline
+\end{tabular}
+\caption{Project timeline.}
+\label{tab:timeline}
+\end{table}
+\endgroup
 
 % \bibliographystyle{acl_natbib}
 \bibliography{references}
