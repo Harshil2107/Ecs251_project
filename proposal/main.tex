@@ -18,7 +18,7 @@
 \title{Ecs251 project proposal}
 
 \author{
-  Harshil Patel$^{1}$ \ , Anugya Sharma$^{1}$, Kaichi Xie$^{1}$
+  Harshil Patel$^{1}$, Anugya Sharma$^{1}$, Kaichi Xie$^{1}$
   \\
   $^{1}$Department of Computer Science, University of California, Davis \\
 }
@@ -26,23 +26,24 @@
 \maketitle
 
 \section{Introduction \& Motivation}
-The advancements in multicore architecture and multiprocessor computers are increasing and ongoing \cite{adam2022co}. To keep up with this trend, we need techniques like multithreading  to maximize the performance of ever-advancing cpu’s \cite{ni}. 
+The advancements in multicore architecture and multiprocessor computers are increasing and ongoing \cite{adam2022co}.
+To keep up with this trend, we need techniques like multithreading to maximize the performance of ever-advancing cpu's \cite{ni}. 
 Multithreading is of vital importance for this because it can harness the power of multiprocessor computer, improve system reliability by preventing one operation from negatively affecting another in a program(user interface event affecting time-critical operation), and maximize cpu use (in programs that read/write from a file, perform I/O, or poll the user interface) \cite{ni}.
 
 While a very efficient tool for harnessing the power of multiprocessor computer, multithreading does come with some challenges.
 The top most important challenge in multithreading is the management of thread pools \cite{lee2011novel}, namely the size of the thread pool. 
-The number of threads in a thread pool determine  the changes in response times and resource utilization \cite{lee2011novel}.
+The number of threads in a thread pool determine the changes in response times and resource utilization \cite{lee2011novel}.
 In our research, we aim to collect empirical data that informs decisions on thread pool size.
 In doing so, we also aim to propose a “dynamic thread pool” with varying number of threads such that we can optimize minimum response time for maximum resource utilization.
 We will evaluate evaluate the performance trade-offs between static and dynamic thread pools under varying workloads and system configurations and answer the question: At what point does the overhead of dynamic thread creation outweigh its memory savings compared to static thread pools?
 
- \section{Background \& Related Work}
+\section{Background \& Related Work}
 
 Current heuristics that are used to determine the number of threads are flawed \cite{ling2000analysis}.
 In our preliminary research, we find that there have been few researches on dynamic model for thread size. 
 One of the first such model was the Watermark model which adjusts the number of threads according to the current number of incoming requests \cite{kim2007prediction}.
-The issue with this model is that while it solves the problem of “efficient usage of  resources”, it doesn't efficiently obtain the required number of threads in advance \cite{kang2008prediction}. 
-Furthermore, there are also prediction based models to determine thread pool size, but in such models, only factors such as the request rate or number of worker threads is  considered in the management \cite{lee2011novel}.
+The issue with this model is that while it solves the problem of "efficient usage of resources", it doesn't efficiently obtain the required number of threads in advance \cite{kang2008prediction}.
+Furthermore, there are also prediction based models to determine thread pool size, but in such models, only factors such as the request rate or number of worker threads is considered in the management \cite{lee2011novel}.
 One of the research that has proposed dynamic thread pool model(prediction based), themselves point out that the model lacks testing for a longer period of time and on general server environment which provides
 various services simultaneously \cite{ling2000analysis}.
 Another research adds to the prediction model by proposing what they call the "Trendy exponential moving average model" and again the issue with this model seems to be that it doesn't have the desired accuracy in its prediction \cite{lee2011novel}. 
@@ -53,13 +54,19 @@ Not just costs and such latency issues, there is also the question of system des
 There is a lack of comprehensive studies that quantify the performance implications of static vs dynamic thread pools across different workloads and system configurations.
 By systematically evaluating these trade-offs, we can provide practical guidelines for system architects to choose the right thread pool strategy based on their specific workload and performance requirements. 
 
+\section{Problem challenges}
+When implementing two different thread pools to compare their performance, one challenge is to make sure that the comparison is fair.
+We need to make sure that both implementations are the same in terms of how they execute instructions and the only difference is how they manage the threads.
+As shown by Desrochers \cite{desrochers2014fast_lock_free_queue}, that the throughput gap between a lock-free queue and lock\_based queues can range from 14x to 200x depending on the platform.
+We need to make sure that both implementations use the same data structures such as queues, locks, etc and the same algorithms to manage to schedule the tasks and threads.
+
 \section{Evaluation}
 
 Our first step is to implement two thread-pool methods: a static and a dynamic thread pool with C++. To compare them fairly, we will benchmark under three representative workload patterns, each defined by a task arrival process that reflects common real-world traffic conditions:
 \begin{itemize}
-  \item[1] Steady load: a constant arrival rate of 1,000 tasks/second for the full duration of the run. 
-  \item[2] Flash crowd: a burst of 5,000 tasks/second followed by a 10-second idle period, repeated in cycles.
-  \item[3] Daily ramp: alternating phases on 100 tasks/second and 2,000 tasks/second in repeated cycles.
+  \item Steady load: a constant arrival rate of 1,000 tasks/second for the full duration of the run.
+  \item Flash crowd: a burst of 5,000 tasks/second followed by a 10-second idle period, repeated in cycles.
+  \item Daily ramp: alternating phases on 100 tasks/second and 2,000 tasks/second in repeated cycles.
 \end{itemize}
 Across these workloads, we will evaluate two resource dimensions that influence the trade-off between static and dynamic thread pools: latency (time cost) and memory (space cost). To isolate how task characteristics interact with thread-pool policy, we will apply two controlled micro-benchmarks:
 \begin{itemize}
@@ -70,6 +77,7 @@ We evaluate four task categories for both benchmarks. For each benchmark, we run
 \\
 \\
 For each benchmark run, we will record four metrics to evaluate the time and memory costs accordingly (Table 1).
+
 \begingroup
 \setlength{\tabcolsep}{10pt} % Default value: 6pt
 \renewcommand{\arraystretch}{1.5} % Default value: 1
@@ -90,8 +98,9 @@ Thread Count & Active threads over time \\
 \label{tab:metrics}
 \end{table}
 \endgroup
-\\
+
 We will run 12 experiment configurations in total: three workload patterns $\times$ 2 pool types (static and dynamic) $\times$ 2 core counts (4 cores and 16 cores). We will fix the CPU resources available to the benchmark by restricting it to exactly 4 or 16 cores using Linux CPU affinity (e.g., tasket). For each configuration, we run the benchmark for 120 seconds and repeat the process three times; we then aggregate the metrics across the three trials and report the mean and variance.
 
+% \bibliographystyle{acl_natbib}
 \bibliography{references}
 \end{document}
