@@ -12,7 +12,7 @@
 \usepackage{listings}
 \usepackage{subcaption}
 \usepackage{float}
-\usepackage{natbib}
+
 \begin{document}
 
 \title{Ecs251 project proposal}
@@ -28,7 +28,7 @@
 \section{Introduction \& Motivation}
 The advancements in multicore architecture and multiprocessor computers are increasing
  and ongoing \cite{adam2022co}. To keep up with this trend, we need techniques like 
- multithreading  to maximize the performance of  ever-advancing cpu’s \cite{NI}. 
+ multithreading  to maximize the performance of  ever-advancing cpu’s \cite{nimanual}. 
  Multithreading is of vital importance for this because it can harness the power of multiprocessor 
  computer, improve system reliability by preventing one operation from negatively 
  affecting another in a program(user interface event affecting time-critical operation),
@@ -37,7 +37,7 @@ The advancements in multicore architecture and multiprocessor computers are incr
 
 While a very efficient tool for harnessing the power of multiprocessor computer, 
 multithreading does come with some challenges. The top most important challenge in 
-multithreading is the management of thread pools[11], namely the size of the thread 
+multithreading is the management of thread pools\cite{lee2011novel}, namely the size of the thread 
 pool. The number of threads in a thread pool determine  the changes in response times 
 and resource utilization [11]. In our research, we have come up with a “dynamic thread 
 pool” with varying number of threads such that we can optimize minimum response time for
