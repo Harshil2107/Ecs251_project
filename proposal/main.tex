@@ -39,12 +39,16 @@ While a very efficient tool for harnessing the power of multiprocessor computer,
 multithreading does come with some challenges. The top most important challenge in 
 multithreading is the management of thread pools \cite{lee2011novel}, namely the size of the thread 
 pool. The number of threads in a thread pool determine  the changes in response times 
-and resource utilization \cite{lee2011novel}. In our research, we have come up with a “dynamic thread 
+and resource utilization \cite{lee2011novel}. In our research, we aim to collect empirical data that informs
+decisions on thread pool size. In doing so, we also aim to propose a “dynamic thread 
 pool” with varying number of threads such that we can optimize minimum response time for
- maximum resource utilization. 
+ maximum resource utilization. We will evaluate evaluate the performance trade-offs between 
+ static and dynamic thread pools under varying workloads and system configurations and answer 
+ the question: At what point does the overhead of dynamic thread creation outweigh its memory 
+ savings compared to static thread pools?
 
  Current heuristics that are used to
-  determine the number of threads are flawed \cite{ling2000analysis}.In our preliminary research, we 
+  determine the number of threads are flawed \cite{ling2000analysis}. In our preliminary research, we 
   find that there have been few researches on dynamic model for thread size. One of the first such
    model was the Watermark model which adjusts the number of threads according to the current number of incoming 
   requests \cite{kim2007prediction}. The issue with this model is that while it solves the problem of “efficient usage of
@@ -59,11 +63,17 @@ pool” with varying number of threads such that we can optimize minimum respons
        the issue with this model seems to be that it doesn't have the desired accuracy in its prediction
        \cite{lee2011novel}. 
 
- All these researches into dynamic sizes of pool, but none look at the memory usage/CPU
-  overheads and whether that are significantly lower than static pool to signify the 
-  performance cost, whatever they may be. 
- We have to look at this , so that this informs the people making decision to choose 
- dynamic thread pools moving forward. 
+ Of the many researches into dynamic sizes of pool, none look at the memory usage/CPU
+  overheads and whether those are significantly lower than static pool to signify the 
+  performance cost. The trade off for replacing static threads affect the performance and 
+  costs of cloud-based systems \cite{freire2021performance}, use of dynamic pools in web services
+  handling could have latency spikes during high traffic. Not just costs and such latency issues, there is also the question 
+  of system design such as database connection pools, task scheduling in distributed systems, etc which
+   all use thread pools to manage concurrency. There is a lack of comprehensive studies that quantify the
+    performance implications of static vs dynamic thread pools across different 
+    workloads and system configurations. By systematically evaluating these trade-offs,
+     we can provide practical guidelines for system architects to choose the right thread
+      pool strategy based on their specific workload and performance requirements. 
 
 example citation \cite{hu2024fine}.
 
