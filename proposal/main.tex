@@ -18,7 +18,7 @@
 \title{Ecs251 project proposal}
 
 \author{
-  Harshil Patel$^{1}$ \ , Anugya Sharma$^{1}$
+  Harshil Patel$^{1}$ \ , Anugya Sharma$^{1}$, Kaichi Xie$^{1}$
   \\
   $^{1}$Department of Computer Science, University of California, Davis \\
 }
@@ -69,11 +69,14 @@ Across these workloads, we will evaluate two resource dimensions that influence 
 We evaluate four task categories for both benchmarks. For each benchmark, we run (1) Light, (2) Medium, and (3) Heavy tasks by increasing the corresponding tuning parameter values (T for latency-based tasks and N for memory-based tasks). Specifically, each request for the latency-based tasks performs a blocking sleep with $T \in \{100\, \mu s, 1\,ms, 10\,ms\}$, to represent the Light, Medium, and Heavy service time. For memory-based tasks, we use $N\times N$ matrix multiplication with $N \in \{128, 256, 512\}$ to represent Light, Medium, and Heavy working-set sizes, respectively. Finally, we include (4) a Mixed workload for each constraint to capture heterogeneity: 60\% Light / 30\% Medium / 10\% Heavy, where each request samples its T or N from the setting according to this distribution. 
 \\
 \\
-For each benchmark run, we will record four metrics to evaluate the time and memory costs accodingly (Table 1).
+For each benchmark run, we will record four metrics to evaluate the time and memory costs accordingly (Table 1).
+\begingroup
+\setlength{\tabcolsep}{10pt} % Default value: 6pt
+\renewcommand{\arraystretch}{1.5} % Default value: 1
 \begin{table}
 \centering
 \small
-\begin{tabular}{l l}
+\begin{tabular}{l|p{0.5\linewidth}}
 \hline
 \textbf{Metric} & \textbf{Definition} \\
 \hline
@@ -86,7 +89,7 @@ Thread Count & Active threads over time \\
 \caption{Metrics collected in each benchmark run.}
 \label{tab:metrics}
 \end{table}
-\\
+\endgroup
 \\
 We will run 12 experiment configurations in total: three workload patterns $\times$ 2 pool types (static and dynamic) $\times$ 2 core counts (4 cores and 16 cores). We will fix the CPU resources available to the benchmark by restricting it to exactly 4 or 16 cores using Linux CPU affinity (e.g., tasket). For each configuration, we run the benchmark for 120 seconds and repeat the process three times; we then aggregate the metrics across the three trials and report the mean and variance.
 
