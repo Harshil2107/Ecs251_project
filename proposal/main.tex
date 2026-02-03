@@ -77,7 +77,7 @@ Their study simulates these configurations under high workloads to demonstrate t
 While Freire et al. \cite{freire2021performance} provide insights into thread pool configurations, they focus on optimal distribution of a fixed number of threads, while our work aims to compare static vs dynamic thread pool architectures across varying workloads and system settings.
 By systematically evaluating these trade-offs, we can provide practical guidelines for system architects to choose the right thread pool strategy based on their specific workload and performance requirements. 
 
-\section{Problem challenges}
+\section{Challenges}
 When implementing two different thread pools to compare their performance, one challenge is to make sure that the comparison is fair.
 We need to make sure that both implementations are the same in terms of how they execute instructions and the only difference is how they manage the threads.
 As shown by Desrochers \cite{desrochers2014fast_lock_free_queue}, that the throughput gap between a lock-free queue and lock\_based queues can range from 14x to 200x depending on the platform.
