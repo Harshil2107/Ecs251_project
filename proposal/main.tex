@@ -1,30 +1,49 @@
-\documentclass[11pt]{article}
-\usepackage{acl}
-\usepackage{times}
-\usepackage{latexsym}
+\documentclass[manuscript,screen, nonacm]{acmart}
 \usepackage{amsmath}
 \usepackage{graphicx}
-\usepackage{hyperref}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{microtype}
 \usepackage{booktabs}
 \usepackage{listings}
 \usepackage{subcaption}
 \usepackage{float}
 
+\settopmatter{printacmref=false}
+\setcopyright{none}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+
+
 \begin{document}
 
-\title{Ecs251 project proposal}
+\title{Investigating Dynamic vs Static Thread Pools for performance in Multithreaded Applications}
 
-\author{
-  Harshil Patel$^{1}$, Anugya Sharma$^{1}$, Kaichi Xie$^{1}$
-  \\
-  $^{1}$Department of Computer Science, University of California, Davis \\
+\author{Harshil Patel}
+\affiliation{%
+  \institution{University of California, Davis}
+  \department{Department of Computer Science}
+  \country{USA}
 }
 
-\maketitle
+\author{Anugya Sharma}
+\affiliation{%
+  \institution{University of California, Davis}
+  \department{Department of Computer Science}
+  \country{USA}
+}
 
+\author{Kaichi Xie}
+\affiliation{%
+  \institution{University of California, Davis}
+  \department{Department of Computer Science}
+  \country{USA}
+}
+\author{Alfredo Ortiz}
+\affiliation{%
+  \institution{University of California, Davis}
+  \department{Department of Computer Science}
+  \country{USA}
+}
+\authorsaddresses{}
+
+\maketitle
 \section{Introduction \& Motivation}
 The advancements in multicore architecture and multiprocessor computers are increasing and ongoing \cite{adam2022co}.
 To keep up with this trend, we need techniques like multithreading to maximize the performance of ever-advancing cpu's \cite{ni}. 
@@ -91,27 +110,23 @@ The Mixed workload captures heterogeneity by combining light, medium, and heavy 
 
 We will evaluate the following experiment matrix (Table 1):
 
-\begingroup
-\setlength{\tabcolsep}{8pt}
-\renewcommand{\arraystretch}{1.5}
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
-\begin{tabular}{l|l}
-\hline
+\begin{tabular}{ll}
+\toprule
 \textbf{Dimension} & \textbf{Values} \\
-\hline
+\midrule
 Traffic Patterns & Steady load, Burst Load, Ramping Load \\
 Task Types & Memory-based, Latency-based \\
 Task Intensities & Light, Medium, Heavy, Mixed \\
 Pool Types & Static, Dynamic \\
 Core Counts & 4 cores, 16 cores \\
-\hline
+\bottomrule
 \end{tabular}
 \caption{Experiment configuration matrix.}
 \label{tab:config}
 \end{table}
-\endgroup
 
 For each task arrival pattern, we will measure throughput (tasks completed per second), latency (p50, p95, p99 time from task submission to completion), PSS Memory (Proportional Set Size attributable RAM used by the process), and thread count (active threads over time). We will fix the CPU resources available to the benchmark by restricting it to exactly 4 or 16 cores using Linux CPU affinity (e.g., tasket). For each configuration, we run the benchmark for 120 seconds and repeat the process three times.
 we will then aggregate the metrics across the three trials and report the mean and variance.
@@ -130,29 +145,25 @@ In terms of memory usage, we expect the dynamic thread pools to use less overall
 
 We have broken down our timeline into weeks with six weeks to finish and present the project (Table 2).
 
-\begingroup
-\setlength{\tabcolsep}{8pt}
-\renewcommand{\arraystretch}{1.5}
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \small
-\begin{tabular}{l|p{0.65\linewidth}}
-\hline
+\begin{tabular}{lp{0.65\linewidth}}
+\toprule
 \textbf{Week} & \textbf{Tasks} \\
-\hline
+\midrule
 Week 1 (2026-2-3) & Research dynamic and static thread pools, experiment with code to understand implementation\\
 Week 2 (2026-2-8) & Start implementing the thread pools, traffic generation scripts and evaluation scripts, continue research as needed \\
 Week 3 (2026-2-15) & Continue working on code, verify progress aligns with plan, fix bugs\\
 Week 4 (2026-2-22) & Complete implementation and start evaluation \\
 Week 5 (2026-3-1) & Complete results, write research paper, create presentation slides and practice \\
 Week 6 (2026-3-8) & Finalize results, paper, and slides. Submit project and present \\
-\hline
+\bottomrule
 \end{tabular}
 \caption{Project timeline.}
 \label{tab:timeline}
 \end{table}
-\endgroup
 
-% \bibliographystyle{acl_natbib}
+\bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
 \end{document}
