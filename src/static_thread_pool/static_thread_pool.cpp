@@ -1,3 +1,4 @@
+#include "task_queue.h"
 #include <iostream>
 #include <thread>
 #include <mutex>
@@ -27,7 +28,8 @@ class StaticThreadPool
     //collection of threads
     thread_vector t_pool;
     std::uint64_t pool_size;
-    std::queue<Job> job_queue; // place holder
+    TaskQueue job_queue;
+    //std::queue<Job> job_queue; // place holder
     std::condition_variable cv;
     std::mutex mtx;
     bool stop = false;
@@ -37,31 +39,28 @@ class StaticThreadPool
         thread_vector t_pool;
         t_pool.reserve(pool_size);
         for(std::uint64_t i = 0; i < pool_size; ++i)
-        {   
+        {
             t_pool.push_back(std::thread([this]()
             {
                 while(true)
                 {
+
                     Job job;
-                    {
-                        std::unique_lock<std::mutex> lock(mtx);
 
-                        // we wait till there is a job or we are stopping the pool
-                        cv.wait(lock, [this](){ return stop || !job_queue.empty(); });
 
-                        // if we are stopping and there are no jobs left, we can exit the thread
-                        if(stop && job_queue.empty())
+                    try {
+
+                        job = job_queue.pop().value();
+                        job();
+
+                    } catch (const std::bad_optional_access& e) {
+                        if(job_queue.is_shutdown() == true)
                             return;
 
-                        // get the next job from the queue
-                        job = std::move(job_queue.front());
+                        std::cout << "Job is a NULL pointer." << std::endl;
 
-                        //remove the job from the queue
-                        job_queue.pop();
                     }
 
-                    // run the job outside of the lock to allow other threads to access the queue
-                    job();
                 }
             }));
         }
@@ -70,30 +69,28 @@ class StaticThreadPool
 
     public:
 
-        // explicit in a marking in constructor to not change types 
-        explicit StaticThreadPool(std::uint64_t pool_size = 4)
+        // explicit in a marking in constructor to not change types
+        explicit StaticThreadPool(std::uint64_t pool_size /* = 4*/)
         {
-            pool_size = pool_size;
+            //this->pool_size = pool_size;
             t_pool = create_threads(pool_size);
 
         };
 
         void add_job(Job job) {
             {
-                std::unique_lock<std::mutex> lock(mtx);
+
                 job_queue.push(job);
+
             }
 
-            cv.notify_one(); // notify one thread that there is a new job
+           // cv.notify_one(); // notify one thread that there is a new job
         }
 
         void shutdown() {
-            {
-                std::unique_lock<std::mutex> lock(mtx);
-                stop = true; // signal all threads to stop
-            }
 
-            cv.notify_all(); // wake up all threads to let them exit
+
+            job_queue.shutdown();
 
             for(std::thread &worker : t_pool)
             {
@@ -102,7 +99,7 @@ class StaticThreadPool
             }
         };
 
-        //destructor 
+        //destructor
         ~StaticThreadPool()
         {
             shutdown();
@@ -120,16 +117,32 @@ class StaticThreadPool
 void example_job()
 {
     std::cout << "Job is running in thread: " << std::this_thread::get_id() << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(20)); // Simulate work
+    std::this_thread::sleep_for(std::chrono::seconds(5)); // Simulate work
 }
 
-int main()
+int main(int argc, const char *argv[])
 {
-    StaticThreadPool pool(4);
+
+    std::uint64_t threads;
+
+    if(argc != 2)
+    {
+        std::cout << "Please enter call the program with two commands." << std::endl;
+        std::cout<< "Ex: ./File_name 4" << std::endl;
+        std::cout << "The last arguement should be the the amount of threads you want to run." << std::endl;
+        exit(1);
+    }else{
+
+        threads = static_cast<std::uint64_t>(*argv[1]);
+    }
+
+    StaticThreadPool pool(threads);
     for(int i = 0; i < 10; ++i)
     {
         pool.add_job(example_job);
     }
+
+    pool.shutdown();
 
 
 };
