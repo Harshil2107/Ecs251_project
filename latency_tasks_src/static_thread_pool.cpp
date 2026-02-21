@@ -29,7 +29,12 @@ class StaticThreadPool
     thread_vector t_pool;
     std::uint64_t pool_size;
     TaskQueue job_queue;
-    //std::queue<Job> job_queue; // place holder
+
+    //for latency tasks
+    std::atomic<int> pending_tasks{0};   
+    std::condition_variable cv_wait;     
+    std::mutex wait_mtx;  
+
     std::condition_variable cv;
     std::mutex mtx;
     bool stop = false;
@@ -52,6 +57,8 @@ class StaticThreadPool
 
                         job = job_queue.pop().value();
                         job();
+                        pending_tasks--;  //for task1, wait, task2      
+                        cv_wait.notify_all(); //for task1, wait, task2 
 
                     } catch (const std::bad_optional_access& e) {
                         if(job_queue.is_shutdown() == true)
@@ -79,12 +86,18 @@ class StaticThreadPool
 
         void add_job(Job job) {
             {
-
+                pending_tasks++; //for task1, wait, task2 
                 job_queue.push(job);
 
             }
 
            // cv.notify_one(); // notify one thread that there is a new job
+        }
+
+        // For latency tasks
+        void wait() {
+            std::unique_lock<std::mutex> lock(wait_mtx);
+            cv_wait.wait(lock, [this]() { return pending_tasks == 0; });
         }
 
         void shutdown() {
@@ -113,6 +126,7 @@ class StaticThreadPool
 
 };
 
+#include "latency_tasks.cpp"
 
 void example_job()
 {
@@ -123,24 +137,21 @@ void example_job()
 int main(int argc, const char *argv[])
 {
 
-    std::uint64_t threads;
-
     if(argc != 2)
     {
         std::cout << "Please enter call the program with two commands." << std::endl;
         std::cout<< "Ex: ./File_name 4" << std::endl;
         std::cout << "The last arguement should be the the amount of threads you want to run." << std::endl;
         exit(1);
-    }else{
-
-        threads = static_cast<std::uint64_t>(*argv[1]);
     }
+
+    std::uint64_t threads = std::stoull(argv[1]);
 
     StaticThreadPool pool(threads);
-    for(int i = 0; i < 10; ++i)
-    {
-        pool.add_job(example_job);
-    }
+
+    //ADD JOB AREA
+    run_benchmarks(pool);
+
 
     pool.shutdown();
 
