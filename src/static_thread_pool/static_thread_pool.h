@@ -21,14 +21,12 @@ private:
         for (std::uint64_t i = 0; i < pool_size; ++i) {
             pool.push_back(std::thread([this]() {
                 while (true) {
-                    Job job;
-                    try {
-                        job = job_queue.pop().value();
-                        job();
-                    } catch (const std::bad_optional_access&) {
-                        if (job_queue.is_shutdown()) return;
-                        std::cout << "Job is a NULL pointer." << std::endl;
+                    auto job = job_queue.pop();
+                    if (!job.has_value()) {
+                        // pop() returns nullopt only when shutdown and empty.
+                        return;
                     }
+                    (*job)();
                 }
             }));
         }
