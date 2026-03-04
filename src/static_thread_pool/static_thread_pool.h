@@ -42,6 +42,11 @@ public:
         job_queue.push(job);
     }
 
+    // Get reference to the task queue (for metrics sampling)
+    const TaskQueue& get_queue() const {
+        return job_queue;
+    }
+
     void shutdown() {
         job_queue.shutdown();
         for (std::thread& worker : t_pool)
