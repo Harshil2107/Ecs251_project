@@ -6,6 +6,7 @@
 #include <condition_variable>
 #include <functional>
 #include <optional>
+#include <chrono>
 
 // Thread-safe FIFO task queue using mutex + condition variable.
 // Designed to serve as the work queue for both static and dynamic thread pools.
@@ -39,6 +40,17 @@ public:
     // Non-blocking try_pop. Returns std::nullopt immediately if no task available.
     std::optional<Task> try_pop() {
         std::lock_guard<std::mutex> lock(mutex_);
+        if (queue_.empty()) return std::nullopt;
+        Task task = std::move(queue_.front());
+        queue_.pop();
+        return task;
+    }
+
+    // Timed blocking pop. Returns std::nullopt on timeout or shutdown with empty queue.
+    template<class Rep, class Period>
+    std::optional<Task> pop_for(const std::chrono::duration<Rep, Period>& timeout) {
+        std::unique_lock<std::mutex> lock(mutex_);
+        cv_.wait_for(lock, timeout, [this] { return !queue_.empty() || shutdown_; });
         if (queue_.empty()) return std::nullopt;
         Task task = std::move(queue_.front());
         queue_.pop();

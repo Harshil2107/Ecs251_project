@@ -1,42 +1,46 @@
 #include <iostream>
 #include <thread>
-#include <queue>
 #include <functional>
-#include <mutex>
-#include <condition_variable>
 #include <atomic>
 #include <vector>
 #include <chrono>
 #include <future>
+#include "../../queue/task_queue.h"
 
 class DynamicThreadPool {
 public:
     using Task = std::function<void()>;
 
-    DynamicThreadPool(size_t minThreads, size_t maxThreads)
+    // tasksPerThread: how many queued tasks must accumulate per idle-free
+    // submit before a new thread is spawned. 1 = one thread per task (most
+    // aggressive). N = one thread per N pending tasks (more conservative).
+    // idleTimeoutMs: how long a thread waits with no work before exiting
+    // (if above minThreads). Should be shorter than your burst idle period
+    // so memory shrinkage is visible in measurements.
+    DynamicThreadPool(size_t minThreads,
+                      size_t tasksPerThread = 1,
+                      std::chrono::milliseconds idleTimeout = std::chrono::milliseconds(500))
         : minThreads_(minThreads),
-          maxThreads_(maxThreads),
+          tasksPerThread_(tasksPerThread),
+          idleTimeout_(idleTimeout),
           activeThreads_(0),
-          idleThreads_(0),
-          stop_(false)
+          idleThreads_(0)
     {
         for (size_t i = 0; i < minThreads_; ++i)
             spawnThread();
     }
 
     ~DynamicThreadPool() {
-        // FIX #1 (Deadlock): Swap threads_ and set stop_ in a SINGLE critical
-        // section, then release the lock BEFORE calling notify_all(). This
-        // ensures worker threads can re-acquire queueMutex_ to exit their
-        // wait_for() and call removeCurrentThread() without deadlocking.
+        // Swap threads_ out under threadsMutex_ so workers that wake up from
+        // taskQueue_.shutdown() cannot find their own entry and detach from a
+        // vector we are about to join. They will simply return cleanly.
         std::vector<std::thread> toJoin;
         {
-            std::unique_lock<std::mutex> lock(queueMutex_);
-            stop_ = true;
+            std::unique_lock<std::mutex> lock(threadsMutex_);
             toJoin.swap(threads_);
         }
-        // Lock is released here — workers can now acquire it and exit cleanly.
-        cv_.notify_all();
+        // Lock released — workers can now acquire threadsMutex_ freely.
+        taskQueue_.shutdown();   // wakes all waiting workers via notify_all
 
         for (auto& t : toJoin)
             if (t.joinable()) t.join();
@@ -44,24 +48,26 @@ public:
 
     void submit(Task task) {
         {
-            std::unique_lock<std::mutex> lock(queueMutex_);
-            if (stop_) return;
-            taskQueue_.push(std::move(task));
-
-            if (idleThreads_ == 0 && activeThreads_ < maxThreads_)
+            std::lock_guard<std::mutex> lock(threadsMutex_);
+            if (taskQueue_.is_shutdown()) return;
+            // Spawn only when all threads are busy AND there is genuine queue
+            // backpressure. "taskQueue_.size() + 1" is the depth the queue is
+            // about to reach after this push. Spawning at >= tasksPerThread_
+            // means: at tasksPerThread_=1, spawn the moment any task has to
+            // wait; at tasksPerThread_=N, wait until N tasks are piling up.
+            // This avoids spawning when workers are already keeping up.
+            if (idleThreads_ == 0 && taskQueue_.size() + 1 >= tasksPerThread_)
                 spawnThread();
         }
-        cv_.notify_one();
+        taskQueue_.push(std::move(task));
     }
 
     size_t threadCount() const { return activeThreads_.load(); }
 
-    size_t queueSize() const {
-        std::unique_lock<std::mutex> lock(queueMutex_);
-        return taskQueue_.size();
-    }
+    size_t queueSize() const { return taskQueue_.size(); }
 
 private:
+    // Must be called with threadsMutex_ held.
     void spawnThread() {
         threads_.emplace_back([this] { workerLoop(); });
         ++activeThreads_;
@@ -69,35 +75,38 @@ private:
 
     void workerLoop() {
         while (true) {
-            Task task;
             {
-                std::unique_lock<std::mutex> lock(queueMutex_);
+                std::lock_guard<std::mutex> lock(threadsMutex_);
                 ++idleThreads_;
+            }
 
-                bool gotTask = cv_.wait_for(lock, std::chrono::seconds(2),
-                    [this] { return stop_ || !taskQueue_.empty(); });
+            auto result = taskQueue_.pop_for(idleTimeout_);
 
+            {
+                std::lock_guard<std::mutex> lock(threadsMutex_);
                 --idleThreads_;
+            }
 
-                if (stop_ && taskQueue_.empty()) {
+            if (!result.has_value()) {
+                if (taskQueue_.is_shutdown()) {
                     --activeThreads_;
                     removeCurrentThread();
                     return;
                 }
 
-                if (!gotTask) {
+                // Idle timeout: shrink if above minimum.
+                {
+                    std::lock_guard<std::mutex> lock(threadsMutex_);
                     if (activeThreads_ > minThreads_) {
                         --activeThreads_;
                         removeCurrentThread();
                         return;
                     }
-                    continue;
                 }
-
-                task = std::move(taskQueue_.front());
-                taskQueue_.pop();
+                continue;
             }
-            task();
+
+            (*result)();
         }
     }
 
@@ -113,15 +122,14 @@ private:
     }
 
     const size_t minThreads_;
-    const size_t maxThreads_;
+    const size_t tasksPerThread_;
+    const std::chrono::milliseconds idleTimeout_;
 
     std::atomic<size_t>      activeThreads_;
     size_t                   idleThreads_;
-    bool                     stop_;
 
-    mutable std::mutex       queueMutex_;
-    std::condition_variable  cv_;
-    std::queue<Task>         taskQueue_;
+    TaskQueue                taskQueue_;
+    std::mutex               threadsMutex_;
     std::vector<std::thread> threads_;
 };
 
@@ -138,7 +146,11 @@ int main() {
     auto doneFuture = allDone->get_future();
 
     {
-        DynamicThreadPool pool(2, 8);
+        // tasksPerThread=1 → spawn a thread for every task that arrives with
+        // no idle thread. Increase to tune spawn aggressiveness for experiments.
+        // idleTimeout=500ms → threads exit after 500ms idle; set to match your
+        // burst idle period so the pool actually shrinks between bursts.
+        DynamicThreadPool pool(2, /*tasksPerThread=*/1, std::chrono::milliseconds(500));
 
         for (int i = 0; i < totalTasks; ++i) {
             // Capture allDone by value (shared_ptr copy) so the promise stays
