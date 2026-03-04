@@ -17,7 +17,8 @@
 
 using Clock = std::chrono::steady_clock;
 
-void run_traffic_pattern(const char* label, int threads, int N, TrafficConfig cfg) {
+void run_traffic_pattern(const char* label, int threads, int N, TrafficConfig cfg,
+                         const std::string& output_dir = ".") {
     // Create metrics collector
     MetricsCollector metrics;
     
@@ -89,7 +90,7 @@ void run_traffic_pattern(const char* label, int threads, int N, TrafficConfig cf
     std::string json_output = metrics.export_json(config, submitted, elapsed);
     
     // Write JSON to file
-    std::string filename = std::string("results_") + label + ".json";
+    std::string filename = output_dir + "/results_" + label + ".json";
     std::ofstream outfile(filename);
     if (outfile.is_open()) {
         outfile << json_output;
@@ -100,25 +101,27 @@ void run_traffic_pattern(const char* label, int threads, int N, TrafficConfig cf
     }
 }
 
-int main() {
-    // Configuration: Adjust these parameters for different experiments
-    const int THREADS = 10;  // Number of worker threads in pool
-    const int N = 3;         // Matrix size: 3 (quick test), 128 (light), 256 (medium), 512 (heavy)
+int main(int argc, char* argv[]) {
+    // CLI args: [threads] [matrix_size] [output_dir]
+    const int THREADS    = (argc > 1) ? std::stoi(argv[1]) : 10;
+    const int N          = (argc > 2) ? std::stoi(argv[2]) : 3;
+    const std::string OUT_DIR = (argc > 3) ? argv[3] : ".";
 
     std::cout << "Starting Thread Pool Benchmark with Metrics Collection\n";
     std::cout << "Configuration: " << THREADS << " threads, " << N << "x" << N << " matrix\n";
+    std::cout << "Output dir   : " << OUT_DIR << "\n";
     std::cout << "========================================================\n";
 
     // Production benchmark: 120-second runs with high load
-    run_traffic_pattern("Steady", THREADS, N, steady(/*rate=*/1000,                                /*total=*/120));
-    run_traffic_pattern("Burst",  THREADS, N, burst( /*rate=*/2000, /*burst=*/2, /*idle=*/2,       /*total=*/120));
-    run_traffic_pattern("Ramp",   THREADS, N, ramp(  /*high=*/1500, /*low=*/500, /*phase=*/10,     /*total=*/120));
+    run_traffic_pattern("Steady", THREADS, N, steady(/*rate=*/1000,                                /*total=*/120), OUT_DIR);
+    run_traffic_pattern("Burst",  THREADS, N, burst( /*rate=*/2000, /*burst=*/2, /*idle=*/2,       /*total=*/120), OUT_DIR);
+    run_traffic_pattern("Ramp",   THREADS, N, ramp(  /*high=*/1500, /*low=*/500, /*phase=*/10,     /*total=*/120), OUT_DIR);
 
     // Quick test (uncomment to use instead):
-    // run_traffic_pattern("Steady", THREADS, N, steady(/*rate=*/50,                           /*total=*/5));
-    // run_traffic_pattern("Burst",  THREADS, N, burst( /*rate=*/200, /*burst=*/1, /*idle=*/2,  /*total=*/9));
-    // run_traffic_pattern("Ramp",   THREADS, N, ramp(  /*high=*/100, /*low=*/20,  /*phase=*/2, /*total=*/8));
+    // run_traffic_pattern("Steady", THREADS, N, steady(/*rate=*/50,                           /*total=*/5), OUT_DIR);
+    // run_traffic_pattern("Burst",  THREADS, N, burst( /*rate=*/200, /*burst=*/1, /*idle=*/2,  /*total=*/9), OUT_DIR);
+    // run_traffic_pattern("Ramp",   THREADS, N, ramp(  /*high=*/100, /*low=*/20,  /*phase=*/2, /*total=*/8), OUT_DIR);
 
     std::cout << "\n========================================================\n";
-    std::cout << "Benchmark complete! Check results_*.json files for detailed metrics.\n";
+    std::cout << "Benchmark complete! Check " << OUT_DIR << "/results_*.json for detailed metrics.\n";
 }
