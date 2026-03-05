@@ -8,6 +8,7 @@
 #include <chrono>
 #include <mutex>
 #include <cstdint>
+#include <stdexcept>
 
 using Job = std::function<void()>;
 
@@ -29,9 +30,17 @@ private:
     std::vector<std::thread> threads_;
 
     // Must be called with threadsMutex_ held.
-    void spawnThread() {
-        threads_.emplace_back([this] { workerLoop(); });
-        ++activeThreads_;
+    // Returns true if the thread was created, false if the OS refused (EAGAIN).
+    bool spawnThread() {
+        try {
+            threads_.emplace_back([this] { workerLoop(); });
+            ++activeThreads_;
+            return true;
+        } catch (const std::system_error&) {
+            // OS out of threads (EAGAIN / ENOMEM) — back off gracefully.
+            // Existing threads will drain the queue.
+            return false;
+        }
     }
 
     void workerLoop() {
@@ -100,7 +109,8 @@ public:
     {
         std::lock_guard<std::mutex> lock(threadsMutex_);
         for (size_t i = 0; i < minThreads_; ++i)
-            spawnThread();
+            if (!spawnThread())
+                throw std::runtime_error("DynamicThreadPool: failed to spawn minimum threads");
     }
 
     // Submit a task — same signature as StaticThreadPool::add_job().
@@ -118,7 +128,7 @@ public:
             if (desired > idleThreads_) {
                 size_t to_spawn = desired - idleThreads_;
                 for (size_t i = 0; i < to_spawn; ++i)
-                    spawnThread();
+                    if (!spawnThread()) break;  // OS refused — back off
             }
         }
         job_queue.push(std::move(job));
