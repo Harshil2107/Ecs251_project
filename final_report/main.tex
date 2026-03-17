@@ -77,22 +77,37 @@ Their study simulates these configurations under high workloads to demonstrate t
 While Freire et al. \cite{freire2021performance} provide insights into thread pool configurations, they focus on optimal distribution of a fixed number of threads, while our work aims to compare static vs dynamic thread pool architectures across varying workloads and system settings.
 By systematically evaluating these trade-offs, we can provide practical guidelines for system architects to choose the right thread pool strategy based on their specific workload and performance requirements. 
 
-\section{Challenges}
-When implementing two different thread pools to compare their performance, one challenge is to make sure that the comparison is fair.
-We need to make sure that both implementations are the same in terms of how they execute instructions and the only difference is how they manage the threads.
-As shown by Desrochers \cite{desrochers2014fast_lock_free_queue}, that the throughput gap between a lock-free queue and lock\_based queues can range from 14x to 200x depending on the platform.
-We need to make sure that both implementations use the same data structures such as queues, locks, etc and the same algorithms to manage to schedule the tasks and threads.
+% \section{Challenges}
+% When implementing two different thread pools to compare their performance, one challenge is to make sure that the comparison is fair.
+% We need to make sure that both implementations are the same in terms of how they execute instructions and the only difference is how they manage the threads.
+% As shown by Desrochers \cite{desrochers2014fast_lock_free_queue}, that the throughput gap between a lock-free queue and lock\_based queues can range from 14x to 200x depending on the platform.
+% We need to make sure that both implementations use the same data structures such as queues, locks, etc and the same algorithms to manage to schedule the tasks and threads.
 
-\section{Proposed Solution}
+\section{Implementation}\label{sec:implementation}
+We tested the dynamic thread pool and the static thread pool on cloud lab. 
+We believe that testing the thread pool on cloud lab would give the most accurate results as cloudlab machines are bare-metal and will not have any background processes that would normally be running on a normal computer. 
 
-We address the shortcomings mentioned in \ref{sec:background} by implementing minimal static and dynamic thread pool architectures in C++ that differ only in their thread lifecycle management policies, while sharing the same task scheduling and execution logic.
-The static thread pool will pre-create a fixed number of threads at initialization, which will remain active throughout the lifetime of the pool.
-The dynamic thread pool will start with zero threads and will create new threads on-demand when tasks arrive.
-Idle threads will be terminated after a configurable timeout period to free up resources.
-Importantly, both implementations will use the same task queue, task scheduling algorithm (e.g., FIFO), and other shared components to ensure a fair comparison.
-This approach will allow us to isolate architectural differences from quality unlike comparing off the shelf implementations like Intel TBB or Boost, which may have optimizations that effect performance independently of thread pool policy.
+\subsection{Hardware}
+The system we used on cloud had two Intel Xeon Silver 4114 CPUs and each one has 10 cores. Although, they also have hyper threading technology so each core logically acts has another core. So we potentially had 40 cores we could use for this project research.
+Each core can run at a base frequency of 2.20 GHz, and can reach a max turbo frequency of 3.00 GHz. The system also had 192GB of DDR4 RAM, which was plenty for the project. 
+The operating system that was provided by cloud lab was Ubuntu 24.04.
+\subsection{Thread Pool Implementation}
+When we implemented the thread pool we wanted to make sure that the comparison between the two pools were completely fair. 
+One thread pool should not have an upright advantage over the other since we want to get an accurate result based on the methodology of the thread creation.
+To achieve this we created a task queue which was used on both static thread pool and dynamic thread pool.
+Task queue ensures that both thread pools are thread safe, and ensures that jobs are being queued are exactly the same, so that there is fairness between the two programs. 
+The static thread pool will be fixed at ten threads when when running the test. 
+The dynamic thread pool will start with two threads, and will be able to expand to the capacity of what the system can provide. 
+This will allow us to see how will dynamic thread pool can perform under a high load scenarios. 
+The dynamic thread pool will shrink its pool if 200ms has elapsed and there is no job for a thread to do, this will allow use to test how dynamic thread pool can save system resources.
+% We address the shortcomings mentioned in \ref{sec:background} by implementing minimal static and dynamic thread pool architectures in C++ that differ only in their thread lifecycle management policies, while sharing the same task scheduling and execution logic.
+% The static thread pool will pre-create a fixed number of threads at initialization, which will remain active throughout the lifetime of the pool.
+% The dynamic thread pool will start with zero threads and will create new threads on-demand when tasks arrive.
+% Idle threads will be terminated after a configurable timeout period to free up resources.
+% Importantly, both implementations will use the same task queue, task scheduling algorithm (e.g., FIFO), and other shared components to ensure a fair comparison.
+% This approach will allow us to isolate architectural differences from quality unlike comparing off the shelf implementations like Intel TBB or Boost, which may have optimizations that effect performance independently of thread pool policy.
 
-\subsection{Evaluation} \label{sec:evaluaiton}
+\subsection{Evaluation Setup} \label{sec:evaluaiton}
 
 To evaluate our thread pool implementations, we benchmarked them under three traffic patterns, each defined by a task arrival process that reflects different traffic scenarios:
 \begin{itemize}
@@ -145,6 +160,10 @@ We did not set a max thread count for the dynamic thread pool as at a cap the dy
 
 Table~\ref{tab:latency_results} reports mean throughput, latency percentiles, memory, and thread count for all latency-based configurations averaged over three trials.
 Figure~\ref{fig:latency_metrics} shows the corresponding time-series traces.
+As shown in the table and the figures, for light (100 $\mu s$) and medium (1 $ms$) latency tasks, both pools perform similarly in throughput (999 t/s), latency (p99 around 1.1ms) and queue depth (near zero) and we see no benefit or cost of dynamic scaling.
+However, for the heavy (10 $ms$) latency tasks, we see that the static thread pool saturates as 10 threads and 10 ms task time equals the rate of 1000 t/s, which causes zero headroom for queuing and results in the queue depth spiking to thousands of pending tasks and p99 latency shooting up to seconds.
+In contrast, the dynamic thread pool scales up to aruond 15 threads, which allows it to keep up with the incoming task rate and maintain a p99 latency of around 10 ms with similar memory usage to the static pool.
+This shows us that for latency-sensitive workloads, dynamic thread pools can provide significant performance benefits as the threads do not have to do much active work and can simply block on the task.
 
 \begin{table}[htbp]
 \centering
@@ -227,6 +246,11 @@ Figure~\ref{fig:latency_metrics} shows the corresponding time-series traces.
 
 Table~\ref{tab:matmul_results} reports mean throughput, latency percentiles, memory, and thread count for all matrix multiplication configurations averaged over three trials.
 Figure~\ref{fig:matmul_metrics} shows the corresponding time-series traces.
+As shown in the table and the figures, for the light (128 x 128) matrix multiplication tasks, both pools perfor, similarly in throughput (999 t/s), latency (p99 around 6 ms) and queue depth (near zero).
+The only exception being under burst traffic where the dynamic pool spawns more threads than the static pool, which causes it to use more memory but performance is similar to the static pool.
+However, for the medium (256 x 256) and heavy (512 x 512) even though the dynamic thread pool performs better in terms of latency, the memory usage and active thread count is significantly higher than the static pool as shown in Fig \ref{fig:matmul_memory} and Fig \ref{fig:matmul_threads} while the throughput crashes.
+This happens because with the creation of more threads, the main overhead of the dynamic thread pool changes to the overhead of context switching and memory bloat from excess threads, as a lot of processing power is being used to manage the threads instead of doing the actual work of multiplying the matrices.
+This shows us that for the CPU-bound workloads, the static thread pool can perform better as the threads are doing active work and the overhead of managing the threads in the dynamic pool can outweigh the benefits of scaling and ideally some sort of thread cap should be used to prevent over-scaling and the performance degradation.
 
 \begin{table}[!ht]
 \centering
