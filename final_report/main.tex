@@ -92,7 +92,7 @@ Idle threads will be terminated after a configurable timeout period to free up r
 Importantly, both implementations will use the same task queue, task scheduling algorithm (e.g., FIFO), and other shared components to ensure a fair comparison.
 This approach will allow us to isolate architectural differences from quality unlike comparing off the shelf implementations like Intel TBB or Boost, which may have optimizations that effect performance independently of thread pool policy.
 
-\subsection{Evaluation}
+\subsection{Evaluation} \label{sec:evaluaiton}
 
 To evaluate our thread pool implementations, we benchmarked them under three traffic patterns, each defined by a task arrival process that reflects different traffic scenarios:
 \begin{itemize}
@@ -134,14 +134,203 @@ Core Counts & 10 cores \\
 For each task arrival pattern, we measured throughput (tasks completed per second), latency (p50, p95, p99 time from task submission to completion), PSS Memory (Proportional Set Size attributable RAM used by the process), and thread count (active threads over time). We fixd the CPU resources available to the benchmark by restricting 10 cores. For each configuration, we run the benchmark for 120 seconds and repeat the process three times.
 we will then aggregate the metrics across the three trials to account for system noise and variability.
 
-\section {Results}
+\section{Results}
 
-For out project, we expect to see that the dynamic thread pool with outperform the static thread pool in scenarios with variable workloads, such as bursty or ramping traffic patterns.
-This is because the dynamic pool can adapt to changing demand by creating or terminating threads as needed, leading to better resource utilization.
-In contrast, the static thread pool might perform well under steady load conditions where the fixed number of threads can handle the incoming tasks without significant queuing delays.
-We also expect the dynamic thread pool to incur some overhead due to thread creation and destruction, which may lead to higher latency in scenarios with frequent load changes.
-However, we expect that this overhead will be offset by the improved responsiveness and reduced queuing delays in high load and variable traffic scenarios.
-In terms of memory usage, we expect the dynamic thread pools to use less overall memory when compared to the static thread pools during low load periods, as idle threads in the dynamic thread pool can be terminated to free up resources.
+As referenced in section \ref{sec:evaluaiton}, we ran a total of 36 configurations (3 traffic patterns $\times$ 2 task types $\times$ 3 task intensities $\times$ 2 pool types) with three trials each, resulting in 108 benchmark runs.
+For these experiments, we set the static thread pool to have a fixed size of 10 threads, matching the number of CPU cores that were pinned.
+For the dynamic thread pool, we set a minimum thread count of 0 and a rate of spawning a new thread for every 10 tasks in the queue, with the maximum set to OS limits.
+We did not set a max thread count for the dynamic thread pool as at a cap the dynamic pool would behave like the static pool and we wanted to observe the effects of over-scaling.
+
+\subsection{Latency-Based Tasks}
+
+Table~\ref{tab:latency_results} reports mean throughput, latency percentiles, memory, and thread count for all latency-based configurations averaged over three trials.
+Figure~\ref{fig:latency_metrics} shows the corresponding time-series traces.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{llcrrrr}
+\toprule
+\textbf{Traffic} & \textbf{Task} & \textbf{Pool} & \textbf{Tput (t/s)} & \textbf{p99 (ms)} & \textbf{Mem (MB)} & \textbf{Threads} \\
+\midrule
+  Burst & Light & Static & 998.9 & 0.20 & 4.7 & 12.0 \\
+        &       & Dynamic & 998.9 & 0.20 & 4.6 & 4.0 \\
+\cmidrule{2-7}
+        & Medium & Static & 998.9 & 1.10 & 4.7 & 12.0 \\
+        &        & Dynamic & 998.9 & 1.10 & 4.7 & 4.7 \\
+\cmidrule{2-7}
+        & Heavy & Static & 992.3 & 2591.75 & 4.9 & 12.0 \\
+        &       & Dynamic & 998.9 & 10.10 & 5.0 & 15.5 \\
+\midrule
+  Ramp  & Light & Static & 998.9 & 0.20 & 4.7 & 12.0 \\
+        &       & Dynamic & 998.9 & 0.20 & 4.5 & 4.9 \\
+\cmidrule{2-7}
+        & Medium & Static & 998.9 & 1.11 & 4.7 & 12.0 \\
+        &        & Dynamic & 998.9 & 1.10 & 4.6 & 5.2 \\
+\cmidrule{2-7}
+        & Heavy & Static & 992.3 & 5617.00 & 5.0 & 12.0 \\
+        &       & Dynamic & 998.9 & 10.11 & 4.7 & 19.2 \\
+\midrule
+  Steady & Light & Static & 998.9 & 0.19 & 4.7 & 12.0 \\
+         &       & Dynamic & 998.9 & 0.19 & 4.5 & 4.5 \\
+\cmidrule{2-7}
+         & Medium & Static & 998.9 & 1.09 & 4.7 & 12.0 \\
+         &        & Dynamic & 998.9 & 1.10 & 4.5 & 4.9 \\
+\cmidrule{2-7}
+         & Heavy & Static & 992.3 & 865.42 & 4.8 & 12.0 \\
+         &       & Dynamic & 998.9 & 10.10 & 4.8 & 13.4 \\
+\bottomrule
+\end{tabular}
+\caption{Mean results across three trials for latency-based tasks. Mem is mean PSS in MB; Threads is mean active thread count.}
+\label{tab:latency_results}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  
+  \begin{subfigure}{\columnwidth}
+    \centering
+    % Reduced width to shrink the height proportionally
+    \includegraphics[width=0.85\linewidth]{figures/latency_memory.png}
+    \Description{A line graph showing memory usage (PSS) over time for latency tasks.}
+    \caption{Memory usage (PSS)}
+    \label{fig:latency_memory}
+  \end{subfigure}
+
+  \vspace{0.2cm} % Tightened space
+
+  \begin{subfigure}{\columnwidth}
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/latency_queue_depth.png}
+    \Description{A line graph showing the queue depth over time for latency tasks.}
+    \caption{Queue depth over time}
+    \label{fig:latency_queue}
+  \end{subfigure}
+
+  \vspace{0.2cm} % Tightened space
+
+  \begin{subfigure}{\columnwidth}
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/latency_thread_count.png}
+    \Description{A line graph showing the active thread count over time for latency tasks.}
+    \caption{Active thread count over time}
+    \label{fig:latency_threads}
+  \end{subfigure}
+  
+  \Description{Three vertically stacked line graphs displaying memory usage, queue depth, and active thread counts for latency tasks.}
+  \caption{System metrics for latency-based tasks across all traffic patterns and intensities.}
+  \label{fig:latency_metrics}
+\end{figure}
+
+\subsection{Matrix Multiplication Tasks}
+
+Table~\ref{tab:matmul_results} reports mean throughput, latency percentiles, memory, and thread count for all matrix multiplication configurations averaged over three trials.
+Figure~\ref{fig:matmul_metrics} shows the corresponding time-series traces.
+
+\begin{table}[!ht]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{llcrrrr}
+\toprule
+\textbf{Traffic} & \textbf{$N$} & \textbf{Pool} & \textbf{Tput (t/s)} & \textbf{p99 (ms)} & \textbf{Mem (MB)} & \textbf{Threads} \\
+\midrule
+  Burst & 128 & Static & 999.0 & 5.74 & 7.8 & 12.0 \\
+        &     & Dynamic & 998.9 & 6.62 & 16.5 & 17.9 \\
+\cmidrule{2-7}
+        & 256 & Static & 628.5 & 71463.92 & 21.1 & 12.0 \\
+        &     & Dynamic & 252.0 & 7267.56 & 546.7 & 23420.4 \\
+\cmidrule{2-7}
+        & 512 & Static & 65.8 & 1687830.86 & 70.4 & 12.0 \\
+        &     & Dynamic & 62.2 & 48941.92 & 4707.7 & 7125.4 \\
+\midrule
+  Ramp  & 128 & Static & 998.9 & 6.56 & 8.0 & 12.0 \\
+        &     & Dynamic & 998.9 & 6.59 & 8.6 & 14.0 \\
+\cmidrule{2-7}
+        & 256 & Static & 628.5 & 72535.67 & 21.1 & 12.0 \\
+        &     & Dynamic & 253.3 & 44085.01 & 2042.2 & 137086.4 \\
+\cmidrule{2-7}
+        & 512 & Static & 65.9 & 1685673.80 & 70.4 & 12.0 \\
+        &     & Dynamic & 60.4 & 151306.84 & 7050.5 & 43557.9 \\
+\midrule
+  Steady & 128 & Static & 998.9 & 6.60 & 7.9 & 12.0 \\
+         &     & Dynamic & 998.8 & 6.55 & 7.3 & 10.0 \\
+\cmidrule{2-7}
+         & 256 & Static & 628.0 & 70277.60 & 21.0 & 12.0 \\
+         &     & Dynamic & 185.1 & 38719.17 & 2105.8 & 150466.3 \\
+\cmidrule{2-7}
+         & 512 & Static & 65.8 & 1685253.26 & 70.4 & 12.0 \\
+         &     & Dynamic & 55.1 & 841820.59 & 7221.8 & 133053.4 \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Mean results across three trials for matrix multiplication tasks ($N{\times}N$ matrices). Mem is mean PSS in MB; Threads is mean active thread count.}
+\label{tab:matmul_results}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  
+  \begin{subfigure}{\columnwidth}
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/matmul_memory.png}
+    \Description{A line graph showing memory usage (PSS) over time for matrix multiplication tasks.}
+    \caption{Memory usage (PSS)}
+    \label{fig:matmul_memory}
+  \end{subfigure}
+
+  \vspace{0.2cm}
+
+  \begin{subfigure}{\columnwidth}
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/matmul_queue_depth.png}
+    \Description{A line graph showing the queue depth over time for matrix multiplication tasks.}
+    \caption{Queue depth over time}
+    \label{fig:matmul_queue}
+  \end{subfigure}
+
+  \vspace{0.2cm}
+
+  \begin{subfigure}{\columnwidth}
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/matmul_thread_count.png}
+    \Description{A line graph showing the active thread count over time for matrix multiplication tasks.}
+    \caption{Active thread count over time}
+    \label{fig:matmul_threads}
+  \end{subfigure}
+  
+  \Description{Three vertically stacked line graphs displaying memory usage, queue depth, and active thread counts for matrix multiplication tasks.}
+  \caption{System metrics for matrix multiplication tasks across all traffic patterns and intensities.}
+  \label{fig:matmul_metrics}
+\end{figure}
+
+% \begin{figure*}[!ht]
+%   \centering
+%   \begin{subfigure}[b]{0.32\textwidth}
+%     \centering
+%     \includegraphics[width=\textwidth]{figures/matmul_memory.png}
+%     \caption{Memory usage (PSS)}
+%     \label{fig:matmul_memory}
+%   \end{subfigure}
+%   \hfill
+%   \begin{subfigure}[b]{0.32\textwidth}
+%     \centering
+%     \includegraphics[width=\textwidth]{figures/matmul_queue_depth.png}
+%     \caption{Queue depth over time}
+%     \label{fig:matmul_queue}
+%   \end{subfigure}
+%   \hfill
+%   \begin{subfigure}[b]{0.32\textwidth}
+%     \centering
+%     \includegraphics[width=\textwidth]{figures/matmul_thread_count.png}
+%     \caption{Active thread count over time}
+%     \label{fig:matmul_threads}
+%   \end{subfigure}
+%   \caption{System metrics for matrix multiplication tasks across all traffic patterns and intensities.}
+%   \label{fig:matmul_metrics}
+% \end{figure*}
 
 \section{Conclusion}
 In this project, we aim to systematically evaluate the performance trade-offs between static and dynamic thread pool architectures under varying workloads and traffic patterns.
@@ -155,28 +344,28 @@ We can summarize our findings as follows:
 
 Overall, our results suggest that the choice between static and dynamic thread pools should be primarily guided by the workload characteristics and how much active work the threads are expected to do.
 
-\section{Timeline}
+% \section{Timeline}
 
-We have broken down our timeline into weeks with six weeks to finish and present the project (Table 2).
+% We have broken down our timeline into weeks with six weeks to finish and present the project (Table 2).
 
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{lp{0.65\linewidth}}
-\toprule
-\textbf{Week} & \textbf{Tasks} \\
-\midrule
-Week 1 (2026-2-3) & Research dynamic and static thread pools, experiment with code to understand implementation\\
-Week 2 (2026-2-8) & Start implementing the thread pools, traffic generation scripts and evaluation scripts, continue research as needed \\
-Week 3 (2026-2-15) & Continue working on code, verify progress aligns with plan, fix bugs\\
-Week 4 (2026-2-22) & Complete implementation and start evaluation \\
-Week 5 (2026-3-1) & Complete results, write research paper, create presentation slides and practice \\
-Week 6 (2026-3-8) & Finalize results, paper, and slides. Submit project and present \\
-\bottomrule
-\end{tabular}
-\caption{Project timeline.}
-\label{tab:timeline}
-\end{table}
+% \begin{table}[H]
+% \centering
+% \small
+% \begin{tabular}{lp{0.65\linewidth}}
+% \toprule
+% \textbf{Week} & \textbf{Tasks} \\
+% \midrule
+% Week 1 (2026-2-3) & Research dynamic and static thread pools, experiment with code to understand implementation\\
+% Week 2 (2026-2-8) & Start implementing the thread pools, traffic generation scripts and evaluation scripts, continue research as needed \\
+% Week 3 (2026-2-15) & Continue working on code, verify progress aligns with plan, fix bugs\\
+% Week 4 (2026-2-22) & Complete implementation and start evaluation \\
+% Week 5 (2026-3-1) & Complete results, write research paper, create presentation slides and practice \\
+% Week 6 (2026-3-8) & Finalize results, paper, and slides. Submit project and present \\
+% \bottomrule
+% \end{tabular}
+% \caption{Project timeline.}
+% \label{tab:timeline}
+% \end{table}
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
