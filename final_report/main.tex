@@ -107,6 +107,13 @@ The dynamic thread pool will shrink its pool if 200ms has elapsed and there is n
 % Importantly, both implementations will use the same task queue, task scheduling algorithm (e.g., FIFO), and other shared components to ensure a fair comparison.
 % This approach will allow us to isolate architectural differences from quality unlike comparing off the shelf implementations like Intel TBB or Boost, which may have optimizations that effect performance independently of thread pool policy.
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/thread_pool_architecture.png}
+    \caption{Thread Pool Architecture}
+    \label{fig:yourlabel}
+\end{figure}
+
 \subsection{Evaluation Setup} \label{sec:evaluaiton}
 
 To evaluate our thread pool implementations, we benchmarked them under three traffic patterns, each defined by a task arrival process that reflects different traffic scenarios:
