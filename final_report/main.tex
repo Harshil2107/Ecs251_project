@@ -131,7 +131,7 @@ To isolate how task characteristics interact with thread-pool policy, we will ap
 For each task type, we evaluate three benchmark intensities: Light, Medium, and Heavy.
 For latency-based tasks, each request performs a blocking sleep with $T \in \{100\, \mu s, 1\,ms, 10\,ms\}$ to represent Light, Medium, and Heavy service times, respectively.
 For memory-based tasks, we use $N\times N$ matrix multiplication with $N \in \{128, 256, 512\}$ to represent Light, Medium, and Heavy working-set sizes, respectively.
-For fairness, we fixed the CPU resources available to the benchmark by restricting it to exactly 10 cores using Linux CPU affinity (e.g., tasket).
+For fairness, we fixed the CPU resources available to the benchmark by restricting it to exactly 10 cores using tasket.
 
 We evaluated the following experiment matrix (Table 1):
 
@@ -153,7 +153,7 @@ Core Counts & 10 cores \\
 \label{tab:config}
 \end{table}
 
-For each task arrival pattern, we measured throughput (tasks completed per second), latency (p50, p95, p99 time from task submission to completion), PSS Memory (Proportional Set Size attributable RAM used by the process), and thread count (active threads over time). We fixd the CPU resources available to the benchmark by restricting 10 cores. For each configuration, we run the benchmark for 120 seconds and repeat the process three times.
+For each task arrival pattern, we measured throughput (tasks completed per second), latency (p50, p95, p99 time from task submission to completion), PSS Memory (Proportional Set Size attributable RAM used by the process), and thread count (active threads over time). We fixed the CPU resources available to the benchmark by restricting 10 cores. For each configuration, we run the benchmark for 120 seconds and repeat the process three times.
 we will then aggregate the metrics across the three trials to account for system noise and variability.
 
 \section{Results}
@@ -170,7 +170,11 @@ Figure~\ref{fig:latency_metrics} shows the corresponding time-series traces.
 As shown in the table and the figures, for light (100 $\mu s$) and medium (1 $ms$) latency tasks, both pools perform similarly in throughput (999 t/s), latency (p99 around 1.1ms) and queue depth (near zero) and we see no benefit or cost of dynamic scaling.
 However, for the heavy (10 $ms$) latency tasks, we see that the static thread pool saturates as 10 threads and 10 ms task time equals the rate of 1000 t/s, which causes zero headroom for queuing and results in the queue depth spiking to thousands of pending tasks and p99 latency shooting up to seconds.
 In contrast, the dynamic thread pool scales up to aruond 15 threads, which allows it to keep up with the incoming task rate and maintain a p99 latency of around 10 ms with similar memory usage to the static pool.
-This shows us that for latency-sensitive workloads, dynamic thread pools can provide significant performance benefits as the threads do not have to do much active work and can simply block on the task.
+
+Under heavy latency tasks, we can see that the static thread pool shows a p99 latency difference of about 7x under different traffic patterns (Burst: 2591 ms, Ramp: 5617 ms, Steady: 865 ms) while the latency remains consistent with respect to task size for the static pool under light and medium tasks, which shows that the traffic pattern only matters when the pool is near saturation.
+On the other hand, the dynamic thread pool maintains a consistent p99 latency of around 10 ms across all traffic patterns for the heady latency tasks, which shows that the dynamic pool can effectively handle the varying traffic patterns for latency-sensitive workloads.
+
+These results show us that for latency-sensitive workloads, dynamic thread pools can provide significant performance benefits as the threads do not have to do much active work and can simply block on the task.
 
 \begin{table}[htbp]
 \centering
@@ -183,26 +187,26 @@ This shows us that for latency-sensitive workloads, dynamic thread pools can pro
   Burst & Light & Static & 998.9 & 0.20 & 4.7 & 12.0 \\
         &       & Dynamic & 998.9 & 0.20 & 4.6 & 4.0 \\
 \cmidrule{2-7}
-        & Medium & Static & 998.9 & 1.10 & 4.7 & 12.0 \\
-        &        & Dynamic & 998.9 & 1.10 & 4.7 & 4.7 \\
+        & Medium & Static & 998.9 & 1.10 & 4.8 & 12.0 \\
+        &        & Dynamic & 998.9 & 1.10 & 4.8 & 4.7 \\
 \cmidrule{2-7}
         & Heavy & Static & 992.3 & 2591.75 & 4.9 & 12.0 \\
         &       & Dynamic & 998.9 & 10.10 & 5.0 & 15.5 \\
 \midrule
-  Ramp  & Light & Static & 998.9 & 0.20 & 4.7 & 12.0 \\
-        &       & Dynamic & 998.9 & 0.20 & 4.5 & 4.9 \\
+  Ramp  & Light & Static & 998.9 & 0.20 & 4.8 & 12.0 \\
+        &       & Dynamic & 998.9 & 0.20 & 4.6 & 4.9 \\
 \cmidrule{2-7}
-        & Medium & Static & 998.9 & 1.11 & 4.7 & 12.0 \\
+        & Medium & Static & 998.9 & 1.11 & 4.8 & 12.0 \\
         &        & Dynamic & 998.9 & 1.10 & 4.6 & 5.2 \\
 \cmidrule{2-7}
-        & Heavy & Static & 992.3 & 5617.00 & 5.0 & 12.0 \\
-        &       & Dynamic & 998.9 & 10.11 & 4.7 & 19.2 \\
+        & Heavy & Static & 992.3 & 5617.00 & 5.1 & 12.0 \\
+        &       & Dynamic & 998.9 & 10.11 & 4.8 & 19.2 \\
 \midrule
-  Steady & Light & Static & 998.9 & 0.19 & 4.7 & 12.0 \\
-         &       & Dynamic & 998.9 & 0.19 & 4.5 & 4.5 \\
+  Steady & Light & Static & 998.9 & 0.19 & 4.8 & 12.0 \\
+         &       & Dynamic & 998.9 & 0.19 & 4.6 & 4.5 \\
 \cmidrule{2-7}
-         & Medium & Static & 998.9 & 1.09 & 4.7 & 12.0 \\
-         &        & Dynamic & 998.9 & 1.10 & 4.5 & 4.9 \\
+         & Medium & Static & 998.9 & 1.09 & 4.8 & 12.0 \\
+         &        & Dynamic & 998.9 & 1.10 & 4.6 & 4.9 \\
 \cmidrule{2-7}
          & Heavy & Static & 992.3 & 865.42 & 4.8 & 12.0 \\
          &       & Dynamic & 998.9 & 10.10 & 4.8 & 13.4 \\
@@ -253,10 +257,14 @@ This shows us that for latency-sensitive workloads, dynamic thread pools can pro
 
 Table~\ref{tab:matmul_results} reports mean throughput, latency percentiles, memory, and thread count for all matrix multiplication configurations averaged over three trials.
 Figure~\ref{fig:matmul_metrics} shows the corresponding time-series traces.
-As shown in the table and the figures, for the light (128 x 128) matrix multiplication tasks, both pools perfor, similarly in throughput (999 t/s), latency (p99 around 6 ms) and queue depth (near zero).
+As shown in the table and the figures, for the light (128 x 128) matrix multiplication tasks, both pools perform, similarly in throughput (999 t/s), latency (p99 around 6 ms) and queue depth (near zero).
 The only exception being under burst traffic where the dynamic pool spawns more threads than the static pool, which causes it to use more memory but performance is similar to the static pool.
-However, for the medium (256 x 256) and heavy (512 x 512) even though the dynamic thread pool performs better in terms of latency, the memory usage and active thread count is significantly higher than the static pool as shown in Fig \ref{fig:matmul_memory} and Fig \ref{fig:matmul_threads} while the throughput crashes.
-This happens because with the creation of more threads, the main overhead of the dynamic thread pool changes to the overhead of context switching and memory bloat from excess threads, as a lot of processing power is being used to manage the threads instead of doing the actual work of multiplying the matrices.
+However, for the medium (256 x 256) and heavy (512 x 512) even though the dynamic thread pool performs better in terms of latency, the memory usage and active thread count is significantly higher than the static pool, as shown in Fig \ref{fig:matmul_memory} and Fig \ref{fig:matmul_threads}, while the throughput crashes.
+This happens because with the creation of more threads, the main overhead of the dynamic thread pool changes to the overhead of context switching and memory bloat from excess threads, as a lot of time and resources are being used to manage the threads instead of doing the actual work of multiplying the matrices.
+
+Under different traffic patterns, the performance of the static pool is consistent across all traffic pattern for a specific task size, which shows that the traffic pattern does not matter when the pool is saturated and the bottleneck is the work being done by the threads.
+The dynamic thread pool also shows a similar performance across all traffic patterns for a specific task size, which shows that the traffic pattern does not matter when the workload is the main bottleneck.
+
 This shows us that for the CPU-bound workloads, the static thread pool can perform better as the threads are doing active work and the overhead of managing the threads in the dynamic pool can outweigh the benefits of scaling and ideally some sort of thread cap should be used to prevent over-scaling and the performance degradation.
 
 \begin{table}[!ht]
@@ -268,32 +276,32 @@ This shows us that for the CPU-bound workloads, the static thread pool can perfo
 \toprule
 \textbf{Traffic} & \textbf{$N$} & \textbf{Pool} & \textbf{Tput (t/s)} & \textbf{p99 (ms)} & \textbf{Mem (MB)} & \textbf{Threads} \\
 \midrule
-  Burst & 128 & Static & 999.0 & 5.74 & 7.8 & 12.0 \\
+  Burst & 128 & Static & 999.0 & 5.74 & 7.9 & 12.0 \\
         &     & Dynamic & 998.9 & 6.62 & 16.5 & 17.9 \\
 \cmidrule{2-7}
         & 256 & Static & 628.5 & 71463.92 & 21.1 & 12.0 \\
-        &     & Dynamic & 252.0 & 7267.56 & 546.7 & 23420.4 \\
+        &     & Dynamic & 252.0 & 7267.56 & 549.8 & 23420.4 \\
 \cmidrule{2-7}
-        & 512 & Static & 65.8 & 1687830.86 & 70.4 & 12.0 \\
-        &     & Dynamic & 62.2 & 48941.92 & 4707.7 & 7125.4 \\
+        & 512 & Static & 65.8 & 1687830.86 & 72.1 & 12.0 \\
+        &     & Dynamic & 62.2 & 48941.92 & 4820.7 & 7125.4 \\
 \midrule
-  Ramp  & 128 & Static & 998.9 & 6.56 & 8.0 & 12.0 \\
-        &     & Dynamic & 998.9 & 6.59 & 8.6 & 14.0 \\
+  Ramp  & 128 & Static & 998.9 & 6.56 & 8.1 & 12.0 \\
+        &     & Dynamic & 998.9 & 6.59 & 8.7 & 14.0 \\
 \cmidrule{2-7}
-        & 256 & Static & 628.5 & 72535.67 & 21.1 & 12.0 \\
-        &     & Dynamic & 253.3 & 44085.01 & 2042.2 & 137086.4 \\
+        & 256 & Static & 628.5 & 72535.67 & 21.6 & 12.0 \\
+        &     & Dynamic & 253.3 & 44085.01 & 2091.2 & 137086.4 \\
 \cmidrule{2-7}
-        & 512 & Static & 65.9 & 1685673.80 & 70.4 & 12.0 \\
-        &     & Dynamic & 60.4 & 151306.84 & 7050.5 & 43557.9 \\
+        & 512 & Static & 65.9 & 1685673.80 & 72.1 & 12.0 \\
+        &     & Dynamic & 60.4 & 151306.84 & 7219.7 & 43557.9 \\
 \midrule
-  Steady & 128 & Static & 998.9 & 6.60 & 7.9 & 12.0 \\
-         &     & Dynamic & 998.8 & 6.55 & 7.3 & 10.0 \\
+  Steady & 128 & Static & 998.9 & 6.60 & 8.0 & 12.0 \\
+         &     & Dynamic & 998.8 & 6.55 & 7.4 & 10.0 \\
 \cmidrule{2-7}
-         & 256 & Static & 628.0 & 70277.60 & 21.0 & 12.0 \\
-         &     & Dynamic & 185.1 & 38719.17 & 2105.8 & 150466.3 \\
+         & 256 & Static & 628.0 & 70277.60 & 21.4 & 12.0 \\
+         &     & Dynamic & 185.1 & 38719.17 & 2156.3 & 150466.3 \\
 \cmidrule{2-7}
-         & 512 & Static & 65.8 & 1685253.26 & 70.4 & 12.0 \\
-         &     & Dynamic & 55.1 & 841820.59 & 7221.8 & 133053.4 \\
+         & 512 & Static & 65.8 & 1685253.26 & 72.1 & 12.0 \\
+         &     & Dynamic & 55.1 & 841820.59 & 7395.1 & 133053.4 \\
 \bottomrule
 \end{tabular}%
 }
@@ -364,16 +372,18 @@ This shows us that for the CPU-bound workloads, the static thread pool can perfo
 % \end{figure*}
 
 \section{Conclusion}
-In this project, we aim to systematically evaluate the performance trade-offs between static and dynamic thread pool architectures under varying workloads and traffic patterns.
+In this project, we aim to evaluate the performance trade-offs between static and dynamic thread pool architectures under varying workloads and traffic patterns.
 We can summarize our findings as follows:
 \begin{itemize}
-    \item Dynamic pool wins for I/O-bound / latency-sensitive workloads : thread scaling prevents queue buildup when tasks can block; the heavier the task and the tighter the arrival rate, the larger the advantage
-    \item Static pool wins for CPU-bound workloads: a fixed thread count matching available cores avoids context-switching overhead, cache thrashing, and memory bloat from excess threads.
-    \item Thread over-scaling is harmful under compute pressure: spawning threads beyond core count produces diminishing returns then actively hurts throughput; memory from concurrent large allocations can exceed system RAM and trigger swapping
-    \item Traffic pattern matters only when the pool is near saturation : Burst and Ramp expose queuing instability in the static pool under heavy latency tasks, but have negligible effect when throughput is the bottleneck (e.g. large matrix multiplication)
+    \item Dynamic pool wins for I/O-bound / latency-sensitive workloads : thread scaling prevents queue buildup when tasks can block. This advantage increases with the task duration and traffic.
+    \item Static pool wins for CPU-bound workloads: A fixed thread count matching available cores avoids context-switching overhead, cache thrashing, and memory bloat from excess threads. While the static pool can saturate under high load, the dynamic pool's performance degrades more due to context switching overhead.
+    \item Thread over-scaling is harmful under compute pressure: spawning threads beyond core count produces diminishing returns that actively hurts throughput.
+    \item Traffic pattern matters only when the pool is near saturation : Burst and Ramp show queuing instability in the static pool under heavy latency tasks, but have negligible effect when throughput is the bottleneck (e.g. large matrix multiplication)
 \end{itemize}
 
-Overall, our results suggest that the choice between static and dynamic thread pools should be primarily guided by the workload characteristics and how much active work the threads are expected to do.
+Overall, our results suggest that the choice between static and dynamic thread pools should be primarily guided by the workload characteristics and how much active work the threads are expected to do.\\
+
+\noindent\textbf{Note:} We used LLM tools like claude, gemini and copilot to help with debugging our implementation and refactoring and cleaning up our benchmark code.
 
 % \section{Timeline}
 
