@@ -100,7 +100,7 @@ Task queue ensures that both thread pools are thread safe, and ensures that jobs
 The static thread pool will be fixed at ten threads when when running the test. 
 The dynamic thread pool will start with two threads, and will be able to expand to the capacity of what the system can provide. 
 This will allow us to see how will dynamic thread pool can perform under a high load scenarios. 
-The dynamic thread pool will shrink its pool if 200ms has elapsed and there is no job for a thread to do, this will allow use to test how dynamic thread pool can save system resources.
+The dynamic thread pool will shrink its pool if 500ms has elapsed and there is no job for a thread to do, this will allow use to test how dynamic thread pool can save system resources.
 % We address the shortcomings mentioned in \ref{sec:background} by implementing minimal static and dynamic thread pool architectures in C++ that differ only in their thread lifecycle management policies, while sharing the same task scheduling and execution logic.
 % The static thread pool will pre-create a fixed number of threads at initialization, which will remain active throughout the lifetime of the pool.
 % The dynamic thread pool will start with zero threads and will create new threads on-demand when tasks arrive.
