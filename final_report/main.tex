@@ -84,6 +84,12 @@ By systematically evaluating these trade-offs, we can provide practical guidelin
 % As shown by Desrochers \cite{desrochers2014fast_lock_free_queue}, that the throughput gap between a lock-free queue and lock\_based queues can range from 14x to 200x depending on the platform.
 % We need to make sure that both implementations use the same data structures such as queues, locks, etc and the same algorithms to manage to schedule the tasks and threads.
 
+\section{Challenges}
+When implementing two different thread pools to compare their performance, one challenge is to make sure that the comparison is fair.
+We need to make sure that both implementations are the same in terms of how they execute instructions and the only difference is how they manage the threads.
+As shown by Desrochers \cite{desrochers2014fast_lock_free_queue}, that the throughput gap between a lock-free queue and lock\_based queues can range from 14x to 200x depending on the platform.
+We need to make sure that both implementations use the same data structures such as queues, locks, etc and the same algorithms to manage to schedule the tasks and threads.
+
 \section{Implementation}\label{sec:implementation}
 We tested the dynamic thread pool and the static thread pool on cloud lab. 
 We believe that testing the thread pool on cloud lab would give the most accurate results as cloudlab machines are bare-metal and will not have any background processes that would normally be running on a normal computer. 
@@ -170,7 +176,7 @@ Table~\ref{tab:latency_results} reports mean throughput, latency percentiles, me
 Figure~\ref{fig:latency_metrics} shows the corresponding time-series traces.
 As shown in the table and the figures, for light (100 $\mu s$) and medium (1 $ms$) latency tasks, both pools perform similarly in throughput (999 t/s), latency (p99 around 1.1ms) and queue depth (near zero) and we see no benefit or cost of dynamic scaling.
 However, for the heavy (10 $ms$) latency tasks, we see that the static thread pool saturates as 10 threads and 10 ms task time equals the rate of 1000 t/s, which causes zero headroom for queuing and results in the queue depth spiking to thousands of pending tasks and p99 latency shooting up to seconds.
-In contrast, the dynamic thread pool scales up to aruond 15 threads, which allows it to keep up with the incoming task rate and maintain a p99 latency of around 10 ms with similar memory usage to the static pool.
+In contrast, the dynamic thread pool scales up to around 15 threads, which allows it to keep up with the incoming task rate and maintain a p99 latency of around 10 ms with similar memory usage to the static pool.
 
 Under heavy latency tasks, we can see that the static thread pool shows a p99 latency difference of about 7x under different traffic patterns (Burst: 2591 ms, Ramp: 5617 ms, Steady: 865 ms) while the latency remains consistent with respect to task size for the static pool under light and medium tasks, which shows that the traffic pattern only matters when the pool is near saturation.
 On the other hand, the dynamic thread pool maintains a consistent p99 latency of around 10 ms across all traffic patterns for the heady latency tasks, which shows that the dynamic pool can effectively handle the varying traffic patterns for latency-sensitive workloads.
