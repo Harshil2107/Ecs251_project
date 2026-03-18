@@ -1,5 +1,5 @@
 # Thread Pool Benchmark: Static vs. Dynamic Architectures
-ECS 260 — UC Davis | CloudLab: 2× Intel Xeon Silver 4114, 192 GB RAM, Ubuntu 24.04
+ECS 251 — UC Davis | CloudLab: 2× Intel Xeon Silver 4114, 192 GB RAM, Ubuntu 24.04
 
 ## Code Structure
 ```
