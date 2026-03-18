@@ -138,7 +138,7 @@ To isolate how task characteristics interact with thread-pool policy, we will ap
 For each task type, we evaluate three benchmark intensities: Light, Medium, and Heavy.
 For latency-based tasks, each request performs a blocking sleep with $T \in \{100\, \mu s, 1\,ms, 10\,ms\}$ to represent Light, Medium, and Heavy service times, respectively.
 For memory-based tasks, we use $N\times N$ matrix multiplication with $N \in \{128, 256, 512\}$ to represent Light, Medium, and Heavy working-set sizes, respectively.
-For fairness, we fixed the CPU resources available to the benchmark by restricting it to exactly 10 cores using tasket.
+For fairness, we fixed the CPU resources available to the benchmark by restricting it to exactly 10 cores using taskset.
 
 We evaluated the following experiment matrix (Table 1):
 
@@ -179,7 +179,7 @@ However, for the heavy (10 $ms$) latency tasks, we see that the static thread po
 In contrast, the dynamic thread pool scales up to around 15 threads, which allows it to keep up with the incoming task rate and maintain a p99 latency of around 10 ms with similar memory usage to the static pool.
 
 Under heavy latency tasks, we can see that the static thread pool shows a p99 latency difference of about 7x under different traffic patterns (Burst: 2591 ms, Ramp: 5617 ms, Steady: 865 ms) while the latency remains consistent with respect to task size for the static pool under light and medium tasks, which shows that the traffic pattern only matters when the pool is near saturation.
-On the other hand, the dynamic thread pool maintains a consistent p99 latency of around 10 ms across all traffic patterns for the heady latency tasks, which shows that the dynamic pool can effectively handle the varying traffic patterns for latency-sensitive workloads.
+On the other hand, the dynamic thread pool maintains a consistent p99 latency of around 10 ms across all traffic patterns for the heavy latency tasks, which shows that the dynamic pool can effectively handle the varying traffic patterns for latency-sensitive workloads.
 
 These results show us that for latency-sensitive workloads, dynamic thread pools can provide significant performance benefits as the threads do not have to do much active work and can simply block on the task.
 
@@ -352,7 +352,8 @@ We can summarize our findings as follows:
     \item Traffic pattern matters only when the pool is near saturation : Burst and Ramp show queuing instability in the static pool under heavy latency tasks, but have negligible effect when throughput is the bottleneck (e.g. large matrix multiplication)
 \end{itemize}
 
-Overall, our results suggest that the choice between static and dynamic thread pools should be primarily guided by the workload characteristics and how much active work the threads are expected to do.\\
+Overall, our results suggest that unlike prediction-based models that only focus on the request rate,
+the choice between static and dynamic thread pools should be primarily guided by the workload characteristics and how much active work the threads are expected to do.\\
 
 \noindent\textbf{Note:} We used LLM tools like claude, gemini and copilot to help with debugging our implementation and refactoring and cleaning up our benchmark code.
 
