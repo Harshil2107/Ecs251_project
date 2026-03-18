@@ -153,7 +153,7 @@ Core Counts & 10 cores \\
 \label{tab:config}
 \end{table}
 
-For each task arrival pattern, we measured throughput (tasks completed per second), latency (p50, p95, p99 time from task submission to completion), PSS Memory (Proportional Set Size attributable RAM used by the process), and thread count (active threads over time). We fixed the CPU resources available to the benchmark by restricting 10 cores. For each configuration, we run the benchmark for 120 seconds and repeat the process three times.
+For each task arrival pattern, we measured throughput (tasks completed per second), latency (p50, p95, p99 time from task submission to completion), Memory usage, and thread count (active threads over time). We fixed the CPU resources available to the benchmark by restricting 10 cores. For each configuration, we run the benchmark for 120 seconds and repeat the process three times.
 we will then aggregate the metrics across the three trials to account for system noise and variability.
 
 \section{Results}
@@ -212,7 +212,7 @@ These results show us that for latency-sensitive workloads, dynamic thread pools
          &       & Dynamic & 998.9 & 10.10 & 4.8 & 13.4 \\
 \bottomrule
 \end{tabular}
-\caption{Mean results across three trials for latency-based tasks. Mem is mean PSS in MB; Threads is mean active thread count.}
+\caption{Mean results across three trials for latency-based tasks. Mem is mean usage in MB; Threads is mean active thread count.}
 \label{tab:latency_results}
 \end{table}
 
@@ -223,8 +223,8 @@ These results show us that for latency-sensitive workloads, dynamic thread pools
     \centering
     % Reduced width to shrink the height proportionally
     \includegraphics[width=0.85\linewidth]{figures/latency_memory.png}
-    \Description{A line graph showing memory usage (PSS) over time for latency tasks.}
-    \caption{Memory usage (PSS)}
+    \Description{A line graph showing memory usage over time for latency tasks.}
+    \caption{Memory usage}
     \label{fig:latency_memory}
   \end{subfigure}
 
@@ -305,7 +305,7 @@ This shows us that for the CPU-bound workloads, the static thread pool can perfo
 \bottomrule
 \end{tabular}%
 }
-\caption{Mean results across three trials for matrix multiplication tasks ($N{\times}N$ matrices). Mem is mean PSS in MB; Threads is mean active thread count.}
+\caption{Mean results across three trials for matrix multiplication tasks ($N{\times}N$ matrices). Mem is mean usage in MB; Threads is mean active thread count.}
 \label{tab:matmul_results}
 \end{table}
 
@@ -315,8 +315,8 @@ This shows us that for the CPU-bound workloads, the static thread pool can perfo
   \begin{subfigure}{\columnwidth}
     \centering
     \includegraphics[width=0.85\linewidth]{figures/matmul_memory.png}
-    \Description{A line graph showing memory usage (PSS) over time for matrix multiplication tasks.}
-    \caption{Memory usage (PSS)}
+    \Description{A line graph showing memory usage over time for matrix multiplication tasks.}
+    \caption{Memory usage}
     \label{fig:matmul_memory}
   \end{subfigure}
 
@@ -350,7 +350,7 @@ This shows us that for the CPU-bound workloads, the static thread pool can perfo
 %   \begin{subfigure}[b]{0.32\textwidth}
 %     \centering
 %     \includegraphics[width=\textwidth]{figures/matmul_memory.png}
-%     \caption{Memory usage (PSS)}
+%     \caption{Memory usage}
 %     \label{fig:matmul_memory}
 %   \end{subfigure}
 %   \hfill
