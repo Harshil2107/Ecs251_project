@@ -254,13 +254,13 @@ These results show us that for latency-sensitive workloads, dynamic thread pools
   \label{fig:latency_metrics}
 \end{figure}
 
-\subsection{Matrix Multiplication Tasks}
+\subsection{Matrix Multiplication Tasks} \label{sec:matmul-res}
 
 Table~\ref{tab:matmul_results} reports mean throughput, latency percentiles, memory, and thread count for all matrix multiplication configurations averaged over three trials.
 Figure~\ref{fig:matmul_metrics} shows the corresponding time-series traces.
 As shown in the table and the figures, for the light (128 x 128) matrix multiplication tasks, both pools perform, similarly in throughput (999 t/s), latency (p99 around 6 ms) and queue depth (near zero).
 The only exception being under burst traffic where the dynamic pool spawns more threads than the static pool, which causes it to use more memory but performance is similar to the static pool.
-However, for the medium (256 x 256) and heavy (512 x 512) even though the dynamic thread pool performs better in terms of latency, the memory usage and active thread count is significantly higher than the static pool, as shown in Fig \ref{fig:matmul_memory} and Fig \ref{fig:matmul_threads}, while the throughput crashes.
+However, for the medium (256 x 256) and heavy (512 x 512) even though the dynamic thread pool performs better in terms of latency, but the memory usage reaches 7221MB compared to 70MB for the static pool and active thread count exceeds 150,000 while the throughput crashes showing an over-scaling problem.
 This happens because with the creation of more threads, the main overhead of the dynamic thread pool changes to the overhead of context switching and memory bloat from excess threads, as a lot of time and resources are being used to manage the threads instead of doing the actual work of multiplying the matrices.
 
 Under different traffic patterns, the performance of the static pool is consistent across all traffic pattern for a specific task size, which shows that the traffic pattern does not matter when the pool is saturated and the bottleneck is the work being done by the threads.
@@ -309,42 +309,6 @@ This shows us that for the CPU-bound workloads, the static thread pool can perfo
 \caption{Mean results across three trials for matrix multiplication tasks ($N{\times}N$ matrices). Mem is mean usage in MB; Threads is mean active thread count.}
 \label{tab:matmul_results}
 \end{table}
-
-\begin{figure}[htbp]
-  \centering
-  
-  \begin{subfigure}{\columnwidth}
-    \centering
-    \includegraphics[width=0.85\linewidth]{figures/matmul_memory.png}
-    \Description{A line graph showing memory usage over time for matrix multiplication tasks.}
-    \caption{Memory usage}
-    \label{fig:matmul_memory}
-  \end{subfigure}
-
-  \vspace{0.2cm}
-
-  \begin{subfigure}{\columnwidth}
-    \centering
-    \includegraphics[width=0.85\linewidth]{figures/matmul_queue_depth.png}
-    \Description{A line graph showing the queue depth over time for matrix multiplication tasks.}
-    \caption{Queue depth over time}
-    \label{fig:matmul_queue}
-  \end{subfigure}
-
-  \vspace{0.2cm}
-
-  \begin{subfigure}{\columnwidth}
-    \centering
-    \includegraphics[width=0.85\linewidth]{figures/matmul_thread_count.png}
-    \Description{A line graph showing the active thread count over time for matrix multiplication tasks.}
-    \caption{Active thread count over time}
-    \label{fig:matmul_threads}
-  \end{subfigure}
-  
-  \Description{Three vertically stacked line graphs displaying memory usage, queue depth, and active thread counts for matrix multiplication tasks.}
-  \caption{System metrics for matrix multiplication tasks across all traffic patterns and intensities.}
-  \label{fig:matmul_metrics}
-\end{figure}
 
 % \begin{figure*}[!ht]
 %   \centering
@@ -411,4 +375,47 @@ Overall, our results suggest that the choice between static and dynamic thread p
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
+
+
+\appendix
+\section{Additional results}
+The following time series plots show the memory usage, queue depth, and active thread count for matrix multiplication tasks.
+The steep memory usage and thread count growth in the medium and heavy workloads back up the over scaling behavior discussed in section \ref{sec:matmul-res}.
+
+\begin{figure}[hbp]
+  \centering
+  
+  \begin{subfigure}{\columnwidth}
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/matmul_memory.png}
+    \Description{A line graph showing memory usage over time for matrix multiplication tasks.}
+    \caption{Memory usage}
+    \label{fig:matmul_memory}
+  \end{subfigure}
+
+  \vspace{0.2cm}
+
+  \begin{subfigure}{\columnwidth}
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/matmul_queue_depth.png}
+    \Description{A line graph showing the queue depth over time for matrix multiplication tasks.}
+    \caption{Queue depth over time}
+    \label{fig:matmul_queue}
+  \end{subfigure}
+
+  \vspace{0.2cm}
+
+  \begin{subfigure}{\columnwidth}
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/matmul_thread_count.png}
+    \Description{A line graph showing the active thread count over time for matrix multiplication tasks.}
+    \caption{Active thread count over time}
+    \label{fig:matmul_threads}
+  \end{subfigure}
+  
+  \Description{Three vertically stacked line graphs displaying memory usage, queue depth, and active thread counts for matrix multiplication tasks.}
+  \caption{System metrics for matrix multiplication tasks across all traffic patterns and intensities.}
+  \label{fig:matmul_metrics}
+\end{figure}
+
 \end{document}
